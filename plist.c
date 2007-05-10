@@ -36,6 +36,9 @@
 
 __MBSDID("$MidnightBSD: src/usr.sbin/pkg_install/lib/plist.c,v 1.50.2.1 2006/01/10 22:15:06 krion Exp $");
 
+#define CMND_MAGIC_COOKIE '@'
+
+static PlistEntryType parse_command(const char*);
 
 /* Do everything needed to set up a new plist.  Always use this to create a plist,
  * don't go off and do it yourself.
@@ -72,6 +75,7 @@ Plist* parse_plist_file(FILE *fp)
 {
   size_t length;
   char *line;
+  Plist *list = new_plist();
   
   while ((line = fgetln(fp, &length)) != NULL) {
     if (feof(fp)) {
@@ -83,38 +87,46 @@ Plist* parse_plist_file(FILE *fp)
       }
     }
     
-    
     /* change the last \n to \0 */
     *(line + length - 1) = 0;
     
-    
-    if (*line == '@') {
+    PlistEntry *entry = (PlistEntry *)malloc(sizeof(PlistEntry));
+    entry->data = (char  *)malloc(strlen(line) + 1);
+    if (entry == NULL || entry->data == NULL) {
+      // warn: out of mem!
+      return NULL;
+    }
+       
+    if (*line == CMND_MAGIC_COOKIE) {
       line++;
       char *cmnd = strsep(&line, " \t");
       
       if (cmnd == NULL) {
         // warn: malformed plist
         return NULL;
-      }
-      
-      char *data = (char *)malloc(strlen(line) + 1);
-      
-      if (cmnd == NULL) {
-        // warn: out of mem!
-        return NULL;
-      }
-      
-      strlcpy(data, line, (strlen(line) + 1));
-      
-      printf("%s: %s\n", cmnd, line);
+      }   
+
+      entry->type = parse_command(cmnd);      
     } else {
-      printf("file: %s\n", line);
+      entry->type = PLIST_FILE;
     }
+  
+    strlcpy(entry->data, line, (strlen(line) + 1));
+    STAILQ_INSERT_TAIL(list, entry, next);
   }
   
-  return new_plist();
+  return list;
 }
     
     
-  
+static PlistEntryType parse_command(const char *s) 
+{
+  if (!strcmp(s, "cwd"))
+    return PLIST_CWD;
+  if (!strcmp(s, "exec"))
+    return PLIST_EXEC;
+  if (!strcmp(s, "unexec"))
+    return PLIST_UNEXEC;
+}
+
 

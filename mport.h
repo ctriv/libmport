@@ -38,9 +38,13 @@ __MBSDID("$MidnightBSD: src/usr.sbin/pkg_install/lib/plist.c,v 1.50.2.1 2006/01/
 
 #include <sys/queue.h>
 
-/* Incomplete */
-enum _PlistEntryType {
-  PLIST_FILE, PLIST_EXEC, PLIST_UNEXEC
+/* For now this is just the FreeBSD list, this will change soon. */
+enum _PlistEntryType { 
+  PLIST_FILE, PLIST_CWD, PLIST_CHMOD, PLIST_CHOWN, PLIST_CHGRP,
+  PLIST_COMMENT, PLIST_IGNORE, PLIST_NAME, PLIST_EXEC, PLIST_UNEXEC,
+  PLIST_SRC, PLIST_DISPLY, PLIST_PKGDEP, PLIST_CONFLICTS, PLIST_MTREE,
+  PLIST_DIRRM, PLIST_IGNORE_INST, PLIST_OPTION, PLIST_ORIGIN,
+  PLIST_DEPORIGIN, PLIST_NOINST  
 };
 
 typedef enum _PlistEntryType PlistEntryType;
