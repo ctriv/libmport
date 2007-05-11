@@ -79,7 +79,7 @@ Plist* parse_plist_file(FILE *fp)
   
   while ((line = fgetln(fp, &length)) != NULL) {
     if (feof(fp)) {
-      /* File didn't end in \n, get an exta byte so that the next bit doesn't
+      /* File didn't end in \n, get an exta byte so that the next step doesn't
          wack the last char in the string. */
       length++;
       if ((line = realloc(line, length)) == NULL) {
@@ -91,8 +91,8 @@ Plist* parse_plist_file(FILE *fp)
     *(line + length - 1) = 0;
     
     PlistEntry *entry = (PlistEntry *)malloc(sizeof(PlistEntry));
-    entry->data = (char  *)malloc(strlen(line) + 1);
-    if (entry == NULL || entry->data == NULL) {
+    
+    if (entry == NULL) {
       // warn: out of mem!
       return NULL;
     }
@@ -111,22 +111,81 @@ Plist* parse_plist_file(FILE *fp)
       entry->type = PLIST_FILE;
     }
   
-    strlcpy(entry->data, line, (strlen(line) + 1));
+    if (entry->type == PLIST_COMMENT) {
+      if (!strncmp(line, "ORIGIN:", 7)) {
+        line += 7;
+        entry->type = PLIST_ORIGIN;
+      } else if (!strncmp(line, "DEPORIGIN:", 10)) {
+        line += 10;
+        entry->type = PLIST_DEPORIGIN;
+      }
+    }     
+    
+    if (line == NULL) {
+      /* line was just a directive, no data */
+      entry->data = NULL;
+    } else {    
+      entry->data = (char  *)malloc(strlen(line) + 1);
+      if (entry->data == NULL) {
+        /* warn: out of mem */
+        return NULL;
+      }
+      
+      strlcpy(entry->data, line, (strlen(line) + 1));
+    }
+    
     STAILQ_INSERT_TAIL(list, entry, next);
   }
   
   return list;
 }
-    
+
+     
     
 static PlistEntryType parse_command(const char *s) 
 {
-  if (!strcmp(s, "cwd"))
-    return PLIST_CWD;
+  /* This is in a rough frequency order */
+  if (!strcmp(s, "comment"))
+    return PLIST_COMMENT;
   if (!strcmp(s, "exec"))
     return PLIST_EXEC;
   if (!strcmp(s, "unexec"))
     return PLIST_UNEXEC;
+  if (!strcmp(s, "dirrm"))
+    return PLIST_DIRRM;
+  if (!strcmp(s, "dirrmtry"))
+    return PLIST_DIRRMTRY;
+  if (!strcmp(s, "cwd") || !strcmp(s, "cd"))
+    return PLIST_CWD;
+  if (!strcmp(s, "srcdir"))
+    return PLIST_SRC;
+  if (!strcmp(s, "mode"))
+    return PLIST_CHMOD;
+  if (!strcmp(s, "owner"))
+    return PLIST_CHOWN;
+  if (!strcmp(s, "group"))
+    return PLIST_CHGRP;
+  if (!strcmp(s, "noinst"))
+    return PLIST_NOINST;
+  if (!strcmp(s, "ignore"))
+    return PLIST_IGNORE;
+  if (!strcmp(s, "ignore_inst"))
+    return PLIST_IGNORE_INST;
+  if (!strcmp(s, "name"))
+    return PLIST_NAME;
+  if (!strcmp(s, "display"))
+    return PLIST_DISPLAY;
+  if (!strcmp(s, "pkgdep"))
+    return PLIST_PKGDEP;
+  if (!strcmp(s, "conflicts"))
+    return PLIST_CONFLICTS;
+  if (!strcmp(s, "mtree"))
+    return PLIST_MTREE;
+  if (!strcmp(s, "option"))
+    return PLIST_OPTION;
+  
+  return PLIST_INVALID;
 }
+
 
 
