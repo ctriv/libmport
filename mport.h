@@ -34,9 +34,10 @@
 __MBSDID("$MidnightBSD: src/usr.sbin/pkg_install/lib/plist.c,v 1.50.2.1 2006/01/10 22:15:06 krion Exp $");
 
 
-/* Headerish stuff */
+/* plist stuff */
 
 #include <sys/queue.h>
+#include <stdio.h>
 
 /* For now this is just the FreeBSD list, this will change soon. */
 enum _PlistEntryType { 
@@ -62,6 +63,40 @@ typedef struct _PlistEntry PlistEntry;
 
 Plist* new_plist(void);
 void free_plist(Plist *);
-Plist* parse_plist_file(FILE *);
+int parse_plist_file(FILE *, Plist *);
+
+
+typedef struct {
+  char *comment;
+  char *sourcedir;
+  char *desc;
+  char *prefix;
+  char **dependancies;
+  char *mtree;
+  char *origin;
+  char **conflicts;
+  char *pkginstall;
+  char *pkgdeinstall;
+  char *pkgmessage;
+  char *req_script;
+} PackageMeta;  
+
+
+/* Package creation */
+int create_pkg(Plist *, PackageMeta *);
+
+#include <sqlite3.h>
+
+/* schema */
+void generate_plist_schema(sqlite3 *);
+void generate_package_schema(sqlite3 *);
+
+/* Errors */
+
+#define MPORT_ERR_NO_MEM 		1
+#define MPORT_ERR_FILEIO 		2
+#define MPORT_ERR_MALFORMED_PLIST 	3
+#define MPORT_ERR_SQLITE		4
+
 
 #endif

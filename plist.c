@@ -37,6 +37,7 @@
 __MBSDID("$MidnightBSD: src/usr.sbin/pkg_install/lib/plist.c,v 1.50.2.1 2006/01/10 22:15:06 krion Exp $");
 
 #define CMND_MAGIC_COOKIE '@'
+#define STRING_EQ(r,l) (strcmp((r),(l)) == 0)
 
 static PlistEntryType parse_command(const char*);
 
@@ -71,11 +72,10 @@ void free_plist(Plist *list)
  *
  * Returns NULL on failure.
  */
-Plist* parse_plist_file(FILE *fp)
+int parse_plist_file(FILE *fp, Plist *list)
 {
   size_t length;
   char *line;
-  Plist *list = new_plist();
   
   while ((line = fgetln(fp, &length)) != NULL) {
     if (feof(fp)) {
@@ -83,7 +83,8 @@ Plist* parse_plist_file(FILE *fp)
          wack the last char in the string. */
       length++;
       if ((line = realloc(line, length)) == NULL) {
-        return NULL;
+        /* warn: out of mem */
+        return 1;
       }
     }
     
@@ -94,7 +95,7 @@ Plist* parse_plist_file(FILE *fp)
     
     if (entry == NULL) {
       // warn: out of mem!
-      return NULL;
+      return 1;
     }
        
     if (*line == CMND_MAGIC_COOKIE) {
@@ -103,7 +104,7 @@ Plist* parse_plist_file(FILE *fp)
       
       if (cmnd == NULL) {
         // warn: malformed plist
-        return NULL;
+        return 1;
       }   
 
       entry->type = parse_command(cmnd);      
@@ -111,24 +112,25 @@ Plist* parse_plist_file(FILE *fp)
       entry->type = PLIST_FILE;
     }
   
-    if (entry->type == PLIST_COMMENT) {
-      if (!strncmp(line, "ORIGIN:", 7)) {
-        line += 7;
-        entry->type = PLIST_ORIGIN;
-      } else if (!strncmp(line, "DEPORIGIN:", 10)) {
-        line += 10;
-        entry->type = PLIST_DEPORIGIN;
-      }
-    }     
     
     if (line == NULL) {
       /* line was just a directive, no data */
       entry->data = NULL;
     } else {    
+      if (entry->type == PLIST_COMMENT) {
+        if (!strncmp(line, "ORIGIN:", 7)) {
+          line += 7;
+          entry->type = PLIST_ORIGIN;
+        } else if (!strncmp(line, "DEPORIGIN:", 10)) {
+          line += 10;
+          entry->type = PLIST_DEPORIGIN;
+        }
+      }     
+      
       entry->data = (char  *)malloc(strlen(line) + 1);
       if (entry->data == NULL) {
         /* warn: out of mem */
-        return NULL;
+        return 1;
       }
       
       strlcpy(entry->data, line, (strlen(line) + 1));
@@ -136,8 +138,8 @@ Plist* parse_plist_file(FILE *fp)
     
     STAILQ_INSERT_TAIL(list, entry, next);
   }
-  
-  return list;
+
+  return 0;  
 }
 
      
@@ -145,43 +147,43 @@ Plist* parse_plist_file(FILE *fp)
 static PlistEntryType parse_command(const char *s) 
 {
   /* This is in a rough frequency order */
-  if (!strcmp(s, "comment"))
+  if (STRING_EQ(s, "comment"))
     return PLIST_COMMENT;
-  if (!strcmp(s, "exec"))
+  if (STRING_EQ(s, "exec"))
     return PLIST_EXEC;
-  if (!strcmp(s, "unexec"))
+  if (STRING_EQ(s, "unexec"))
     return PLIST_UNEXEC;
-  if (!strcmp(s, "dirrm"))
+  if (STRING_EQ(s, "dirrm"))
     return PLIST_DIRRM;
-  if (!strcmp(s, "dirrmtry"))
+  if (STRING_EQ(s, "dirrmtry"))
     return PLIST_DIRRMTRY;
-  if (!strcmp(s, "cwd") || !strcmp(s, "cd"))
+  if (STRING_EQ(s, "cwd") || STRING_EQ(s, "cd"))
     return PLIST_CWD;
-  if (!strcmp(s, "srcdir"))
+  if (STRING_EQ(s, "srcdir"))
     return PLIST_SRC;
-  if (!strcmp(s, "mode"))
+  if (STRING_EQ(s, "mode"))
     return PLIST_CHMOD;
-  if (!strcmp(s, "owner"))
+  if (STRING_EQ(s, "owner"))
     return PLIST_CHOWN;
-  if (!strcmp(s, "group"))
+  if (STRING_EQ(s, "group"))
     return PLIST_CHGRP;
-  if (!strcmp(s, "noinst"))
+  if (STRING_EQ(s, "noinst"))
     return PLIST_NOINST;
-  if (!strcmp(s, "ignore"))
+  if (STRING_EQ(s, "ignore"))
     return PLIST_IGNORE;
-  if (!strcmp(s, "ignore_inst"))
+  if (STRING_EQ(s, "ignore_inst"))
     return PLIST_IGNORE_INST;
-  if (!strcmp(s, "name"))
+  if (STRING_EQ(s, "name"))
     return PLIST_NAME;
-  if (!strcmp(s, "display"))
+  if (STRING_EQ(s, "display"))
     return PLIST_DISPLAY;
-  if (!strcmp(s, "pkgdep"))
+  if (STRING_EQ(s, "pkgdep"))
     return PLIST_PKGDEP;
-  if (!strcmp(s, "conflicts"))
+  if (STRING_EQ(s, "conflicts"))
     return PLIST_CONFLICTS;
-  if (!strcmp(s, "mtree"))
+  if (STRING_EQ(s, "mtree"))
     return PLIST_MTREE;
-  if (!strcmp(s, "option"))
+  if (STRING_EQ(s, "option"))
     return PLIST_OPTION;
   
   return PLIST_INVALID;
