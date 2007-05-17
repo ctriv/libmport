@@ -65,13 +65,15 @@ Plist* new_plist(void);
 void free_plist(Plist *);
 int parse_plist_file(FILE *, Plist *);
 
+/* Package Meta-data structure */
 
 typedef struct {
+  char *pkg_filename;
   char *comment;
   char *sourcedir;
   char *desc;
   char *prefix;
-  char **dependancies;
+  char **depends;
   char *mtree;
   char *origin;
   char **conflicts;
@@ -81,6 +83,8 @@ typedef struct {
   char *req_script;
 } PackageMeta;  
 
+PackageMeta * new_packagemeta(void);
+void free_packagemeta(PackageMeta *);
 
 /* Package creation */
 int create_pkg(Plist *, PackageMeta *);
