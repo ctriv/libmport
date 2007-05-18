@@ -95,24 +95,36 @@ static int create_package_db(sqlite3 **db)
 static int create_plist(sqlite3 *db, Plist *plist)
 {
   PlistEntry *e;
-  char *error = 0;
+  sqlite3_stmt *stmnt;
+  const char *rest  = 0;
+  int ret;
+  char sql[]  = "INSERT INTO assets (pkg, type, data) VALUES (?,?,?)";
+  
+  if (sqlite3_prepare_v2(db, sql, -1, &stmnt, &rest) != SQLITE_OK) {
+    fprintf(stderr, "SQL ERROR: %s\n", sqlite3_errmsg(db));
+    exit(1);
+  }
+  
   
   STAILQ_FOREACH(e, plist, next) {
-    char *sql = sqlite3_mprintf(
-      "INSERT INTO assets (pkg, type, data) VALUES ('%q', %d, '%q')",
-      "not figured",
-      e->type,
-      e->data
-    );
-    
-    fprintf(stderr, "sql: %s\n", sql);
-    
-    if (sqlite3_exec(db, sql, NULL, NULL, &error) != SQLITE_OK) {
-      fprintf(stderr, "SQL ERROR: %s\n", error);
-      sqlite3_free(error);
+    if (sqlite3_bind_text(stmnt, 1, "not figured", -1, SQLITE_STATIC) != SQLITE_OK) {
+      fprintf(stderr, "SQL ERROR: %s\n", sqlite3_errmsg(db));
+      exit(1);
     }
-    
-    sqlite3_free(sql); 
+    if (sqlite3_bind_int(stmnt, 2, e->type) != SQLITE_OK) {
+      fprintf(stderr, "SQL ERROR: %s\n", sqlite3_errmsg(db));
+      exit(1);
+    }
+    if (sqlite3_bind_text(stmnt, 3, e->data, -1, SQLITE_STATIC) != SQLITE_OK) {
+      fprintf(stderr, "SQL ERROR: %s\n", sqlite3_errmsg(db));
+      exit(1);
+    }
+    if ((ret = sqlite3_step(stmnt)) != SQLITE_DONE) {
+      fprintf(stderr, "SQL ERROR: (%i) %s\n", sqlite3_errcode(db), sqlite3_errmsg(db));
+      exit(1);
+    }
+        
+    sqlite3_reset(stmnt);
   } 
 }     
 
