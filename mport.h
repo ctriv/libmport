@@ -97,10 +97,17 @@ void generate_package_schema(sqlite3 *);
 
 /* Errors */
 
+int mport_err_code(void);
+char * mport_err_string(void);
+
+int mport_set_err(int, const char *);
+
+#define MPORT_OK			0
 #define MPORT_ERR_NO_MEM 		1
 #define MPORT_ERR_FILEIO 		2
 #define MPORT_ERR_MALFORMED_PLIST 	3
 #define MPORT_ERR_SQLITE		4
 
+#define RETURN_ERROR(code, msg) return mport_set_err((code),(msg))
 
 #endif

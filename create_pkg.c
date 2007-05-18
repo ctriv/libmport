@@ -34,6 +34,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <sqlite3.h>
+#include <errno.h>
 #include "mport.h"
 
 __MBSDID("$MidnightBSD: src/usr.sbin/pkg_install/lib/plist.c,v 1.50.2.1 2006/01/10 22:15:06 krion Exp $");
@@ -56,25 +57,30 @@ int create_pkg(Plist *plist, PackageMeta *pack)
   sqlite3 *db;
   
   if (tmpdir == NULL) 
-    return MPORT_ERR_FILEIO;
+    RETURN_ERROR(MPORT_ERR_FILEIO, strerror(errno));
     
   if (chdir(tmpdir) != 0) 
-    return MPORT_ERR_FILEIO;
+    RETURN_ERROR(MPORT_ERR_FILEIO, strerror(errno));
 
-  /* tmp */
-  printf("Tmpdir: %s\n", tmpdir);
+  if ((ret = create_package_db(&db)) != MPORT_OK)
+    return ret;
     
-  ret += create_package_db(&db);
-  ret += create_plist(db, plist);
-  ret += create_meta(db, pack);
+  if ((ret = create_plist(db, plist)) != MPORT_OK)
+    return ret;
   
-  /* done with the db */
-  sqlite3_close(db);
+  if ((ret = create_meta(db, pack)) != MPORT_OK)
+    return ret;
+    
+  if (sqlite3_close(db) != SQLITE_OK)
+    RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
+    
+  if ((ret = tar_files(plist, pack)) != MPORT_OK)
+    return ret;
+    
+  if ((ret = clean_up(tmpdir)) != MPORT_OK)
+    return ret;
   
-  ret += tar_files(plist, pack);  
-  ret += clean_up(tmpdir);
-  
-  return ret;    
+  return MPORT_OK;    
 }
 
 
@@ -82,7 +88,7 @@ static int create_package_db(sqlite3 **db)
 {
   if (sqlite3_open(PACKAGE_DB_FILENAME, db) != 0) {
     sqlite3_close(*db);
-    return MPORT_ERR_SQLITE;
+    RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(*db));
   }
   
   /* create tables */
@@ -101,27 +107,22 @@ static int create_plist(sqlite3 *db, Plist *plist)
   char sql[]  = "INSERT INTO assets (pkg, type, data) VALUES (?,?,?)";
   
   if (sqlite3_prepare_v2(db, sql, -1, &stmnt, &rest) != SQLITE_OK) {
-    fprintf(stderr, "SQL ERROR: %s\n", sqlite3_errmsg(db));
-    exit(1);
+    RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
   }
   
   
   STAILQ_FOREACH(e, plist, next) {
     if (sqlite3_bind_text(stmnt, 1, "not figured", -1, SQLITE_STATIC) != SQLITE_OK) {
-      fprintf(stderr, "SQL ERROR: %s\n", sqlite3_errmsg(db));
-      exit(1);
+      RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
     }
     if (sqlite3_bind_int(stmnt, 2, e->type) != SQLITE_OK) {
-      fprintf(stderr, "SQL ERROR: %s\n", sqlite3_errmsg(db));
-      exit(1);
+      RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
     }
     if (sqlite3_bind_text(stmnt, 3, e->data, -1, SQLITE_STATIC) != SQLITE_OK) {
-      fprintf(stderr, "SQL ERROR: %s\n", sqlite3_errmsg(db));
-      exit(1);
+      RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
     }
     if ((ret = sqlite3_step(stmnt)) != SQLITE_DONE) {
-      fprintf(stderr, "SQL ERROR: (%i) %s\n", sqlite3_errcode(db), sqlite3_errmsg(db));
-      exit(1);
+      RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
     }
         
     sqlite3_reset(stmnt);
