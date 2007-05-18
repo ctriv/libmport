@@ -38,14 +38,14 @@ static void run_sql(sqlite3 *db, const char *sql);
 
 void generate_plist_schema(sqlite3 *db) 
 {
-  run_sql(db, "CREATE TABLE assets (port text NOT NULL, type int NOT NULL, data text NOT NULL, checksum text)");
-  run_sql(db, "CREATE INDEX assets_port_index ON assets.port");
+  run_sql(db, "CREATE TABLE assets (pkg text NOT NULL, type int NOT NULL, data text NOT NULL, checksum text)");
+  run_sql(db, "CREATE INDEX assets_pkg_index ON assets.pkg");
 }
 
 void generate_package_schema(sqlite3 *db) 
 {
-  run_sql(db, "CREATE TABLE packages (port text NOT NULL, version text NOT ULL, lang text, options text, date text NOT NULL)");
-  run_sql(db, "CREATE UNIQUE INDEX packages_port_index ON packages.port");
+  run_sql(db, "CREATE TABLE packages (pkg text NOT NULL, version text NOT ULL, lang text, options text, date text NOT NULL)");
+  run_sql(db, "CREATE UNIQUE INDEX packages_pkg_index ON packages.pkg");
 }
 
 static void run_sql(sqlite3 *db, const char *sql)

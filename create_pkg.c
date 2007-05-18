@@ -94,6 +94,26 @@ static int create_package_db(sqlite3 **db)
 
 static int create_plist(sqlite3 *db, Plist *plist)
 {
+  PlistEntry *e;
+  char *error = 0;
+  
+  STAILQ_FOREACH(e, plist, next) {
+    char *sql = sqlite3_mprintf(
+      "INSERT INTO assets (pkg, type, data) VALUES ('%q', %d, '%q')",
+      "not figured",
+      e->type,
+      e->data
+    );
+    
+    fprintf(stderr, "sql: %s\n", sql);
+    
+    if (sqlite3_exec(db, sql, NULL, NULL, &error) != SQLITE_OK) {
+      fprintf(stderr, "SQL ERROR: %s\n", error);
+      sqlite3_free(error);
+    }
+    
+    sqlite3_free(sql); 
+  } 
 }     
 
 static int create_meta(sqlite3 *db, PackageMeta *pack)
