@@ -35,6 +35,7 @@
 #include <unistd.h>
 #include <sqlite3.h>
 #include <errno.h>
+#include <md5.h>
 #include "mport.h"
 
 __MBSDID("$MidnightBSD: src/usr.sbin/pkg_install/lib/plist.c,v 1.50.2.1 2006/01/10 22:15:06 krion Exp $");
@@ -42,7 +43,7 @@ __MBSDID("$MidnightBSD: src/usr.sbin/pkg_install/lib/plist.c,v 1.50.2.1 2006/01/
 #define PACKAGE_DB_FILENAME "+CONTENTS.db"
 
 static int create_package_db(sqlite3 **);
-static int create_plist(sqlite3 *, Plist *);
+static int create_plist(sqlite3 *, Plist *, PackageMeta *);
 static int create_meta(sqlite3 *, PackageMeta *);
 static int tar_files(Plist *, PackageMeta *);
 static int clean_up(const char *);
@@ -65,7 +66,7 @@ int create_pkg(Plist *plist, PackageMeta *pack)
   if ((ret = create_package_db(&db)) != MPORT_OK)
     return ret;
     
-  if ((ret = create_plist(db, plist)) != MPORT_OK)
+  if ((ret = create_plist(db, plist, pack)) != MPORT_OK)
     return ret;
   
   if ((ret = create_meta(db, pack)) != MPORT_OK)
@@ -98,20 +99,30 @@ static int create_package_db(sqlite3 **db)
   return 0;
 }
 
-static int create_plist(sqlite3 *db, Plist *plist)
+static int create_plist(sqlite3 *db, Plist *plist, PackageMeta *pack)
 {
   PlistEntry *e;
   sqlite3_stmt *stmnt;
   const char *rest  = 0;
   int ret;
-  char sql[]  = "INSERT INTO assets (pkg, type, data) VALUES (?,?,?)";
+  char sql[]  = "INSERT INTO assets (pkg, type, data, checksum) VALUES (?,?,?,?)";
+  char md5[33];
+  char file[FILENAME_MAX];
+  char cwd[FILENAME_MAX];
+  
+  strlcpy(cwd, pack->sourcedir, FILENAME_MAX);
+  strlcat(cwd, pack->prefix, FILENAME_MAX);
   
   if (sqlite3_prepare_v2(db, sql, -1, &stmnt, &rest) != SQLITE_OK) {
     RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
   }
   
-  
   STAILQ_FOREACH(e, plist, next) {
+    if (e->type == PLIST_CWD) {
+      strlcpy(cwd, pack->sourcedir, FILENAME_MAX);
+      strlcat(cwd, e->data, FILENAME_MAX);
+    }
+    
     if (sqlite3_bind_text(stmnt, 1, "not figured", -1, SQLITE_STATIC) != SQLITE_OK) {
       RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
     }
@@ -120,6 +131,24 @@ static int create_plist(sqlite3 *db, Plist *plist)
     }
     if (sqlite3_bind_text(stmnt, 3, e->data, -1, SQLITE_STATIC) != SQLITE_OK) {
       RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
+    }
+    
+    if (e->type == PLIST_FILE) {
+      snprintf(file, FILENAME_MAX, "%s/%s", cwd, e->data);
+      
+      if (MD5File(file, md5) == NULL) {
+        char *error;
+        asprintf(&error, "File not found: %s", file);
+        RETURN_ERROR(MPORT_ERR_FILE_NOT_FOUND, error);
+      }
+      
+      if (sqlite3_bind_text(stmnt, 4, md5, -1, SQLITE_STATIC) != SQLITE_OK) {
+        RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
+      }
+    } else {
+      if (sqlite3_bind_null(stmnt, 4) != SQLITE_OK) {
+        RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
+      }
     }
     if ((ret = sqlite3_step(stmnt)) != SQLITE_DONE) {
       RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));

@@ -69,6 +69,10 @@ int parse_plist_file(FILE *, Plist *);
 
 typedef struct {
   char *pkg_filename;
+  char *name;
+  char *version;
+  char *lang;
+  char *options;
   char *comment;
   char *sourcedir;
   char *desc;
@@ -107,6 +111,7 @@ int mport_set_err(int, const char *);
 #define MPORT_ERR_FILEIO 		2
 #define MPORT_ERR_MALFORMED_PLIST 	3
 #define MPORT_ERR_SQLITE		4
+#define MPORT_ERR_FILE_NOT_FOUND	5
 
 #define RETURN_ERROR(code, msg) return mport_set_err((code),(msg))
 

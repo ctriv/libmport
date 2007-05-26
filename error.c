@@ -39,10 +39,11 @@ static char err_msg[256];
 /* This goes with the error codes in mport.h */
 static char *mport_err_defaults[] = {
   NULL,
-  "Out of memory."
-  "File I/O Error."
-  "Malformed packing list."
-  "SQLite error."
+  "Out of memory.",
+  "File I/O Error.",
+  "Malformed packing list.",
+  "SQLite error.",
+  "File not found."
 };
   
 
