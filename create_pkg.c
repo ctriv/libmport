@@ -96,7 +96,7 @@ static int create_package_db(sqlite3 **db)
   generate_plist_schema(*db);
   generate_package_schema(*db);
   
-  return 0;
+  return MPORT_OK;
 }
 
 static int create_plist(sqlite3 *db, Plist *plist, PackageMeta *pack)
@@ -166,7 +166,7 @@ static int tar_files(Plist *plist, PackageMeta *pack)
 {
 }
 
-static int clean_up (const char *tmpdir)
+static int clean_up(const char *tmpdir)
 {
 }
 

@@ -7,7 +7,7 @@ WARNS?=	3
 WFORMAT?=	1
 SHLIB_MAJOR=	1
 
-DPADD=	${LIBSQLITE3}
-LDADD=	-lsqlite3
+DPADD=	${LIBSQLITE3} ${LIBPTHREAD} ${LIBMD}
+LDADD=	-lsqlite3 -lpthread -lmd
 
 .include <bsd.lib.mk>
