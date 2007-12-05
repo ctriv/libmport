@@ -1,13 +1,18 @@
-# $FreeBSD: src/usr.sbin/pkg_install/lib/Makefile,v 1.18 2004/10/24 15:33:07 ru Exp $
+# $MidnightBSD: src/lib/libmport/Makefile,v 1.5 2007/12/01 06:21:37 ctriv Exp $
 
 LIB=		mport
-SRCS=		plist.c	create_pkg.c db_schema.c util.c error.c
+SRCS=		archive.c plist.c create_pkg.c db.c util.c error.c \
+		install_pkg.c inst_init.c version_cmp.c
 
+INCS=		mport.h
+
+
+CFLAGS+=	-I${.CURDIR}
 WARNS?=	3
 WFORMAT?=	1
 SHLIB_MAJOR=	1
 
-DPADD=	${LIBSQLITE3} ${LIBPTHREAD} ${LIBMD}
-LDADD=	-lsqlite3 -lpthread -lmd
+DPADD=	${LIBSQLITE3} ${LIBMD}
+LDADD=	-lsqlite3 -lmd
 
 .include <bsd.lib.mk>

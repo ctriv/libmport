@@ -23,24 +23,31 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $MidnightBSD: src/lib/libmport/util.c,v 1.8 2007/12/01 06:21:37 ctriv Exp $
  */
 
 
-
-#include <sqlite3.h>
+#include <errno.h>
 #include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <libgen.h>
 #include "mport.h"
 
-__MBSDID("$MidnightBSD: src/usr.sbin/pkg_install/lib/plist.c,v 1.50.2.1 2006/01/10 22:15:06 krion Exp $");
+__MBSDID("$MidnightBSD: src/lib/libmport/util.c,v 1.8 2007/12/01 06:21:37 ctriv Exp $");
 
 /* Package meta-data creation and destruction */
-PackageMeta* new_packagemeta() 
+mportPackageMeta* mport_new_packagemeta() 
 {
-  return (PackageMeta *)malloc(sizeof(PackageMeta));
+  /* we use calloc so any pointers that aren't set are NULL.
+     (calloc zero's out the memory region. */
+  return (mportPackageMeta *)calloc(1, sizeof(mportPackageMeta));
 }
 
-void free_packagemeta(PackageMeta *pack)
+void mport_free_packagemeta(mportPackageMeta *pack)
 {
   free(pack->pkg_filename);
   free(pack->comment);
@@ -56,6 +63,211 @@ void free_packagemeta(PackageMeta *pack)
   free(pack->pkginstall);
   free(pack->pkgdeinstall);
   free(pack->pkgmessage);
-  free(pack->req_script);
   free(pack);
 }
+
+/* free a vector of mportPackageMeta pointers */
+void mport_free_packagemeta_vec(mportPackageMeta **vec)
+{
+  int i;
+  for (i=0; *(vec + i) != NULL; i++) {
+    mport_free_packagemeta(*(vec + i));
+  }
+  
+  free(vec);
+}
+
+
+/* deletes the entire directory tree at name.
+ * think rm -r filename
+ */
+int mport_rmtree(const char *filename) 
+{
+  return mport_xsystem("/bin/rm -r %s", filename);
+}  
+
+
+/*
+ * Copy fromname to toname 
+ *
+ */
+int mport_copy_file(const char *fromname, const char *toname)
+{
+  return mport_xsystem("/bin/cp %s %s", fromname, toname);
+}
+
+
+
+/* 
+ * create a directory with mode 755.  Do not fail if the
+ * directory exists already.
+ */
+int mport_mkdir(const char *dir) 
+{
+  if (mkdir(dir, S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH) != 0) {
+    if (errno != EEXIST) 
+      RETURN_ERROR(MPORT_ERR_SYSCALL_FAILED, strerror(errno));
+  }
+  
+  return MPORT_OK;
+}
+  
+
+/*
+ * Quick test to see if a file exists.
+ */
+int mport_file_exists(const char *file) 
+{
+  struct stat st;
+  
+  return (lstat(file, &st) == 0);
+}
+
+
+/* mport_xsystem(char *fmt, ...)
+ * 
+ * Our own version on system that takes a format string and a list 
+ * of values.  The fmt works exactly like the stdio output formats.
+ */
+int mport_xsystem(const char *fmt, ...) 
+{
+  va_list args;
+  char *cmnd;
+  int ret;
+  
+  va_start(args, fmt);
+  if (vasprintf(&cmnd, fmt, args) == -1) {
+    /* XXX How will the caller know this is no mem, and not a failed exec? */
+    return MPORT_ERR_NO_MEM;
+  }
+  
+  ret = system(cmnd);
+  
+  free(cmnd);
+  va_end(args);
+  
+  return ret;
+}
+  
+
+
+
+/*
+ * mport_parselist(input, string_array_pointer)
+ *
+ * hacks input into sub strings by whitespace.  Allocates a chunk or memory
+ * for a array of those strings, and sets the pointer you pass to refernce
+ * that memory
+ *
+ * char input[] = "foo bar baz"
+ * char **list;
+ * 
+ * mport_parselist(input, &list);
+ * list = {"foo", "bar", "baz"};
+ */
+void mport_parselist(char *opt, char ***list) 
+{
+  int len;
+  char *input;
+  char *field;
+
+  input = (char *)malloc(strlen(opt) + 1);
+  strlcpy(input, opt, strlen(opt) + 1);
+  
+  /* first we need to get the length of the depends list */
+  for (len = 0; (field = strsep(&opt, " \t\n")) != NULL;) {
+    if (*field != '\0')
+      len++;
+  }    
+
+  *list = (char **)malloc((len + 1) * sizeof(char *));
+
+  if (len == 0) {
+    **list = NULL;
+    return;
+  }
+
+  /* dereference once so we don't loose our minds. */
+  char **vec = *list;
+  
+  while ((field = strsep(&input, " \t\n")) != NULL) {
+    if (*field == '\0')
+      continue;
+
+    *vec = field;
+    vec++;
+  }
+
+  *vec = NULL;
+}
+
+/*
+ * mport_run_plist_exec(fmt, cwd, last_file)
+ * 
+ * handles a @exec or a @unexec directive in a plist.  This function
+ * does the substitions and then runs the command.
+ *
+ * Substitutions:
+ * %F	The last filename extracted (last_file argument)
+ * %D	The current working directory (cwd)
+ * %B	Return the directory part ("dirname") of %D/%F
+ * %f	Return the filename part of ("basename") %D/%F
+ */
+int mport_run_plist_exec(const char *fmt, const char *cwd, const char *last_file) 
+{
+  size_t l;
+  size_t max = FILENAME_MAX * 2;
+  char cmnd[max];
+  char *pos = cmnd;
+  char *name;
+  
+  while (*fmt && max > 0) {
+    if (*fmt == '%') {
+      fmt++;
+      switch (*fmt) {
+        case 'F':
+          strlcpy(pos, last_file, max);
+          l = strlen(last_file);
+          pos += l;
+          max -= l;
+          break;
+        case 'D':
+          strlcpy(pos, cwd, max);
+          l = strlen(cwd);
+          pos += l;
+          max -= l;
+          break;
+        case 'B':
+          name = dirname(last_file);
+          strlcpy(pos, name, max);
+          l = strlen(name);
+          pos += l;
+          max -= l;
+          break;
+        case 'f':
+          name = basename(last_file);
+          strlcpy(pos, name, max);
+          l = strlen(name);
+          pos += l;
+          pos -= l;
+          break;
+        default:
+          *pos = *fmt;
+          max--;
+          pos++;
+      }
+      fmt++;
+    } else {
+      *pos = *fmt;
+      pos++;
+      fmt++;
+      max--;
+    }
+  }
+  
+  *pos = '\0';
+  
+  /* cmnd now hold the expaded command, now execute it*/
+  return mport_xsystem(cmnd);
+}          
+

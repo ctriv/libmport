@@ -23,40 +23,41 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $MidnightBSD: src/lib/libmport/inst_init.c,v 1.3 2007/12/05 17:02:15 ctriv Exp $
  */
 
 
 
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <errno.h>
+#include <string.h>
 #include <sqlite3.h>
-#include <stdlib.h>
 #include "mport.h"
 
-__MBSDID("$MidnightBSD: src/usr.sbin/pkg_install/lib/plist.c,v 1.50.2.1 2006/01/10 22:15:06 krion Exp $");
+__MBSDID("$MidnightBSD: src/lib/libmport/inst_init.c,v 1.3 2007/12/05 17:02:15 ctriv Exp $");
 
-static void run_sql(sqlite3 *db, const char *sql);
 
-void generate_plist_schema(sqlite3 *db) 
+static int create_master_db(sqlite3 **);
+
+/* set up the master database, and related instance infrastructure. */
+int mport_inst_init(sqlite3 **db)
 {
-  run_sql(db, "CREATE TABLE assets (pkg text NOT NULL, type int NOT NULL, data text NOT NULL, checksum text)");
-  run_sql(db, "CREATE INDEX assets_pkg_index ON assets.pkg");
-}
-
-void generate_package_schema(sqlite3 *db) 
-{
-  run_sql(db, "CREATE TABLE packages (pkg text NOT NULL, version text NOT ULL, lang text, options text, date text NOT NULL)");
-  run_sql(db, "CREATE UNIQUE INDEX packages_pkg_index ON packages.pkg");
-}
-
-static void run_sql(sqlite3 *db, const char *sql)
-{
-  char *error = 0;
+  if (mport_mkdir(MPORT_INST_DIR) != MPORT_OK)
+    RETURN_CURRENT_ERROR;
   
-  sqlite3_exec(
-    db,
-    sql,
-    NULL,
-    NULL, 
-    &error
-  );
+  if (mport_mkdir(MPORT_INST_INFRA_DIR) != MPORT_OK)
+    RETURN_CURRENT_ERROR;
+  
+  return create_master_db(db);
+}
+  
+  
+static int create_master_db(sqlite3 **db) 
+{
+  if (mport_db_open_master(db) != MPORT_OK)
+    RETURN_CURRENT_ERROR;  
+
+  /* create tables */
+  return mport_generate_master_schema(*db);
 }

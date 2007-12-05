@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD$
+ * $MidnightBSD: src/lib/libmport/plist.c,v 1.3 2007/09/28 03:01:31 ctriv Exp $
  */
 
 
@@ -34,28 +34,28 @@
 #include <string.h>
 #include "mport.h"
 
-__MBSDID("$MidnightBSD: src/usr.sbin/pkg_install/lib/plist.c,v 1.50.2.1 2006/01/10 22:15:06 krion Exp $");
+__MBSDID("$MidnightBSD: src/lib/libmport/plist.c,v 1.3 2007/09/28 03:01:31 ctriv Exp $");
 
 #define CMND_MAGIC_COOKIE '@'
 #define STRING_EQ(r,l) (strcmp((r),(l)) == 0)
 
-static PlistEntryType parse_command(const char*);
+static mportPlistEntryType parse_command(const char*);
 
 /* Do everything needed to set up a new plist.  Always use this to create a plist,
  * don't go off and do it yourself.
  */
-Plist* new_plist() 
+mportPlist* mport_new_plist() 
 {
-  Plist *list = (Plist*)malloc(sizeof(Plist));
+  mportPlist *list = (mportPlist*)malloc(sizeof(mportPlist));
   STAILQ_INIT(list);
   return list;
 }
 
 
 /* free all the entryes in the list, and then the list itself. */
-void free_plist(Plist *list) 
+void mport_free_plist(mportPlist *list) 
 {
-  PlistEntry *n;
+  mportPlistEntry *n;
 
   while (!STAILQ_EMPTY(list)) {
      n = STAILQ_FIRST(list);
@@ -72,7 +72,7 @@ void free_plist(Plist *list)
  *
  * Returns NULL on failure.
  */
-int parse_plist_file(FILE *fp, Plist *list)
+int mport_parse_plist_file(FILE *fp, mportPlist *list)
 {
   size_t length;
   char *line;
@@ -83,19 +83,22 @@ int parse_plist_file(FILE *fp, Plist *list)
          wack the last char in the string. */
       length++;
       if ((line = realloc(line, length)) == NULL) {
-        /* warn: out of mem */
-        return 1;
+        return MPORT_ERR_NO_MEM;
       }
     }
+    
+    if (length == 1)
+      /* This is almost certainly a blank line. skip it */
+      continue;
+    
     
     /* change the last \n to \0 */
     *(line + length - 1) = 0;
     
-    PlistEntry *entry = (PlistEntry *)malloc(sizeof(PlistEntry));
+    mportPlistEntry *entry = (mportPlistEntry *)malloc(sizeof(mportPlistEntry));
     
     if (entry == NULL) {
-      // warn: out of mem!
-      return 1;
+      return MPORT_ERR_NO_MEM;
     }
        
     if (*line == CMND_MAGIC_COOKIE) {
@@ -103,8 +106,7 @@ int parse_plist_file(FILE *fp, Plist *list)
       char *cmnd = strsep(&line, " \t");
       
       if (cmnd == NULL) {
-        // warn: malformed plist
-        return 1;
+        return MPORT_ERR_MALFORMED_PLIST;
       }   
 
       entry->type = parse_command(cmnd);      
@@ -129,8 +131,7 @@ int parse_plist_file(FILE *fp, Plist *list)
       
       entry->data = (char  *)malloc(strlen(line) + 1);
       if (entry->data == NULL) {
-        /* warn: out of mem */
-        return 1;
+        return MPORT_ERR_NO_MEM;
       }
       
       strlcpy(entry->data, line, (strlen(line) + 1));
@@ -139,12 +140,12 @@ int parse_plist_file(FILE *fp, Plist *list)
     STAILQ_INSERT_TAIL(list, entry, next);
   }
 
-  return 0;  
+  return MPORT_OK;  
 }
 
-     
+
     
-static PlistEntryType parse_command(const char *s) 
+static mportPlistEntryType parse_command(const char *s) 
 {
   /* This is in a rough frequency order */
   if (STRING_EQ(s, "comment"))
