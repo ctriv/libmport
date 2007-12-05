@@ -328,10 +328,12 @@ static int check_preconditions(sqlite3 *db, mportPackageMeta *pack)
   }
   
   /* check for depends */
-  if (sqlite3_prepare_v2(db, "SELECT depend_pkgname, depend_pkgversion FROM stub.depends", -1, &stmt, NULL) != SQLITE_OK) {
-    ret = SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
+  if (mport_db_prepare(db, &stmt, "SELECT depend_pkgname, depend_pkgversion FROM stub.depends") != MPORT_OK) 
     goto DONE;
-  }
+    
+  if (mport_db_prepare(db, &lookup, "SELECT version FROM packages WHERE pkg=?") != MPORT_OK)
+    goto DONE;
+  
   
   while (1) {
     sret = sqlite3_step(stmt);
@@ -340,12 +342,9 @@ static int check_preconditions(sqlite3 *db, mportPackageMeta *pack)
       const char *depend_pkg     = sqlite3_column_text(stmt, 0);
       const char *depend_version = sqlite3_column_text(stmt, 1);
       
-      if (sqlite3_prepare_v2(db, "SELECT version FROM packages WHERE pkg=?", -1, &lookup, NULL) != SQLITE_OK
-          ||
-          sqlite3_bind_text(lookup, 1, depend_pkg, -1, SQLITE_STATIC) != SQLITE_OK
-      ) {
-            ret = SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
-            goto DONE;
+      if (sqlite3_bind_text(lookup, 1, depend_pkg, -1, SQLITE_STATIC) != SQLITE_OK) {
+        ret = SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
+        goto DONE;
       }
       
       lret = sqlite3_step(lookup);
@@ -365,6 +364,9 @@ static int check_preconditions(sqlite3 *db, mportPackageMeta *pack)
         ret = SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
         goto DONE;
       }
+      
+      sqlite3_reset(lookup);
+      sqlite3_clear_bindings(lookup);
     } else if (sret == SQLITE_DONE) {
       /* No more depends to check. */
       break;
