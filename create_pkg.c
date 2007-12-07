@@ -55,7 +55,7 @@ static int archive_plistfiles(struct archive *, mportPackageMeta *, mportPlist *
 static int clean_up(const char *);
 
 
-int mport_create_pkg(mportPlist *plist, mportPackageMeta *pack)
+int mport_create_primative(mportPlist *plist, mportPackageMeta *pack)
 {
   
   int ret;

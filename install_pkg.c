@@ -49,7 +49,7 @@ static int run_mtree(const char *, mportPackageMeta *);
 static int clean_up(const char *);
 static int rollback(void);
 
-int mport_install_pkg(const char *filename, const char *prefix) 
+int mport_install_primative(const char *filename, const char *prefix) 
 {
   /* 
    * The general strategy here is to extract the meta-files into a tempdir, but

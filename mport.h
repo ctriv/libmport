@@ -93,11 +93,11 @@ void mport_free_packagemeta(mportPackageMeta *);
 void mport_free_packagemeta_vec(mportPackageMeta **);
 
 /* Package creation */
-int mport_create_pkg(mportPlist *, mportPackageMeta *);
+int mport_create_primative(mportPlist *, mportPackageMeta *);
 
 
 /* Package installation */
-int mport_install_pkg(const char *, const char *);
+int mport_install_primative(const char *, const char *);
 
 
 #include <sqlite3.h>
