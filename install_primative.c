@@ -43,7 +43,6 @@ __MBSDID("$MidnightBSD: src/lib/libmport/install_pkg.c,v 1.4 2007/12/01 06:21:37
 static int do_pre_install(sqlite3 *, mportPackageMeta *, const char *);
 static int do_actual_install(struct archive *, struct archive_entry *, sqlite3 *, mportPackageMeta *, const char *);
 static int do_post_install(sqlite3 *, mportPackageMeta *, const char *);
-static int check_preconditions(sqlite3 *, mportPackageMeta *);
 static int run_pkg_install(const char *, mportPackageMeta *, const char *);
 static int run_mtree(const char *, mportPackageMeta *);
 static int clean_up(const char *);
@@ -111,7 +110,7 @@ int mport_install_primative(const char *filename, const char *prefix)
     }
     
     /* check if this is installed already, depends, and conflicts */
-    if (check_preconditions(db, pack) != MPORT_OK)
+    if (mport_check_install_preconditions(db, pack) != MPORT_OK)
       RETURN_CURRENT_ERROR;
 
     /* Run mtree.  Run pkg-install. Etc... */
@@ -263,124 +262,6 @@ static int do_post_install(sqlite3 *db, mportPackageMeta *pack, const char *tmpd
 }
 
 
-/* check to see if the package is already installed, if it has any
- * conflicts, and that all its depends are installed.
- */
-static int check_preconditions(sqlite3 *db, mportPackageMeta *pack) 
-{
-  sqlite3_stmt *stmt, *lookup;
-  int ret, sret, lret;
-  const char *inst_version;
-  const char *inst_name;
-  
-  ret = MPORT_OK;
-
-  /* check if the package is already installed */
-  if (sqlite3_prepare_v2(db, "SELECT version FROM packages WHERE pkg=?", -1, &lookup, NULL) != SQLITE_OK) 
-    RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
-
-  if (sqlite3_bind_text(lookup, 1, pack->name, -1, SQLITE_STATIC) != SQLITE_OK) {
-    ret = SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
-    goto DONE;
-  }
-    
-  sret = sqlite3_step(lookup);
-  
-  switch (sret) {
-    case SQLITE_DONE:
-      /* No row found.  Do nothing */
-      break;
-    case SQLITE_ROW:
-      /* Row was found */
-      inst_version = sqlite3_column_text(lookup, 0);
-      ret = SET_ERRORX(MPORT_ERR_ALREADY_INSTALLED, "%s (version %s) is already installed.", pack->name, inst_version);
-      goto DONE;
-      break;
-    default:
-      /* Some sort of sqlite error */
-      ret = SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
-      goto DONE;
-  }
-  sqlite3_finalize(lookup);
-
-  
-  /* Check for conflicts */
-  if (sqlite3_prepare_v2(db, "SELECT packages.name, packages.version FROM stub.conflicts LEFT JOIN packages ON packages.name GLOB stub.conflicts.conflict_pkg AND packages.version GLOB stub.conflicts.conflict_version WHERE packages.name IS NOT NULL", -1, &stmt, NULL) != SQLITE_OK) {
-    ret = SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
-    goto DONE;
-  }
-  
-  while (1) {
-    sret = sqlite3_step(stmt);
-    
-    if (sret == SQLITE_ROW) {
-        inst_name    = sqlite3_column_text(lookup, 0);
-        inst_version = sqlite3_column_text(lookup, 1);
-        ret = SET_ERRORX(MPORT_ERR_CONFLICTS, "Installed package %s-%s conflicts with %s", inst_name, inst_version, pack->name);
-        goto DONE;
-    } else if (sret == SQLITE_DONE) {
-      /* No conflicts */
-      break;
-    } else {
-      ret = SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
-      goto DONE;
-    }
-  }
-  
-  /* check for depends */
-  if (mport_db_prepare(db, &stmt, "SELECT depend_pkgname, depend_pkgversion FROM stub.depends") != MPORT_OK) 
-    goto DONE;
-    
-  if (mport_db_prepare(db, &lookup, "SELECT version FROM packages WHERE pkg=?") != MPORT_OK)
-    goto DONE;
-  
-  
-  while (1) {
-    sret = sqlite3_step(stmt);
-  
-    if (sret == SQLITE_ROW) {
-      const char *depend_pkg     = sqlite3_column_text(stmt, 0);
-      const char *depend_version = sqlite3_column_text(stmt, 1);
-      
-      if (sqlite3_bind_text(lookup, 1, depend_pkg, -1, SQLITE_STATIC) != SQLITE_OK) {
-        ret = SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
-        goto DONE;
-      }
-      
-      lret = sqlite3_step(lookup);
-      
-      if (lret == SQLITE_ROW) {
-        inst_version = sqlite3_column_text(lookup, 0);
-        
-        if (mport_version_cmp(inst_version, depend_version) < 0) {
-          ret = SET_ERRORX(MPORT_ERR_MISSING_DEPEND, "%s depends on %s version %s.  Version %s is installed.", pack->name, depend_pkg, depend_version, inst_version);
-          goto DONE;
-        }
-      } else if (lret == SQLITE_DONE) {
-        /* this depend isn't installed. */
-        ret = SET_ERRORX(MPORT_ERR_MISSING_DEPEND, "%s depends on %s, which is not installed.", pack->name, depend_pkg);
-        goto DONE;
-      } else {
-        ret = SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
-        goto DONE;
-      }
-      
-      sqlite3_reset(lookup);
-      sqlite3_clear_bindings(lookup);
-    } else if (sret == SQLITE_DONE) {
-      /* No more depends to check. */
-      break;
-    } else {
-      ret = SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
-      goto DONE;
-    }
-  }        
-  
-  DONE:
-    sqlite3_finalize(stmt);
-    sqlite3_finalize(lookup);
-    return ret;    
-}  
       
 static int run_mtree(const char *tmpdir, mportPackageMeta *pack)
 {

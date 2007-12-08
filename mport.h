@@ -35,8 +35,7 @@ __MBSDID("$MidnightBSD: src/lib/libmport/mport.h,v 1.8 2007/12/05 17:02:15 ctriv
 
 
 
-/* plist stuff */
-
+#include <sqlite3.h>
 #include <sys/queue.h>
 #include <stdio.h>
 
@@ -100,7 +99,9 @@ int mport_create_primative(mportPlist *, mportPackageMeta *);
 int mport_install_primative(const char *, const char *);
 
 
-#include <sqlite3.h>
+/* precondition checking */
+int mport_check_update_preconditions(sqlite3 *, mportPackageMeta *);
+int mport_check_install_preconditions(sqlite3 *, mportPackageMeta *);
 
 /* schema */
 int mport_generate_master_schema(sqlite3 *);
