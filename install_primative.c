@@ -85,7 +85,7 @@ int mport_install_primative(const char *filename, const char *prefix)
     file = archive_entry_pathname(entry);
     
     if (*file == '+') {
-      snprintf(filepath, FILENAME_MAX, "%s/%s", tmpdir, file);
+      (void)snprintf(filepath, FILENAME_MAX, "%s/%s", tmpdir, file);
       archive_entry_set_pathname(entry, filepath);
       archive_read_extract(a, entry, ARCHIVE_EXTRACT_OWNER|ARCHIVE_EXTRACT_PERM);
     } else {
@@ -181,10 +181,8 @@ static int do_actual_install(
   if ((ret = mport_db_do(db, "INSERT INTO depends (pkg, depend_pkgname, depend_pkgversion, depend_port) SELECT pkg,depend_pkgname,depend_pkgversion,depend_port FROM stub.depends WHERE pkg=%Q", pack->name)) != MPORT_OK) 
     goto ERROR;
   
-  if ((ret = mport_db_prepare(db, &assets, "SELECT type,data FROM stub.assets WHERE pkg=%Q", pack->name)) != MPORT_OK) {
-    SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
+  if ((ret = mport_db_prepare(db, &assets, "SELECT type,data FROM stub.assets WHERE pkg=%Q", pack->name)) != MPORT_OK) 
     goto ERROR;
-  }
 
   cwd = pack->prefix;
 
@@ -221,7 +219,7 @@ static int do_actual_install(
         /* we only look for fatal, because EOF is only an error if we come
         back around. */
         if (archive_read_next_header(a, &entry) == ARCHIVE_FATAL) {
-          SET_ERROR(MPORT_ERR_ARCHIVE, archive_error_string(a));
+          ret = SET_ERROR(MPORT_ERR_ARCHIVE, archive_error_string(a));
           goto ERROR;
         }
         break;
@@ -284,10 +282,11 @@ static int run_pkg_install(const char *tmpdir, mportPackageMeta *pack, const cha
   char file[FILENAME_MAX];
   int ret;
   
-  snprintf(file, FILENAME_MAX, "%s/%s/%s-%s/%s", tmpdir, MPORT_STUB_INFRA_DIR, pack->name, pack->version, MPORT_INSTALL_FILE);    
+  (void)snprintf(file, FILENAME_MAX, "%s/%s/%s-%s/%s", tmpdir, MPORT_STUB_INFRA_DIR, pack->name, pack->version, MPORT_INSTALL_FILE);    
+
   if (mport_file_exists(file)) {
     if ((ret = mport_xsystem("PKG_PREFIX=%s %s %s %s", pack->prefix, MPORT_SH_BIN, file, mode)) != 0)
-      RETURN_ERRORX(MPORT_ERR_SYSCALL_FAILED, "%s %s returned non-zero: %i" MPORT_INSTALL_FILE, mode, ret);
+      RETURN_ERRORX(MPORT_ERR_SYSCALL_FAILED, "%s %s returned non-zero: %i", MPORT_INSTALL_FILE, mode, ret);
   }
   
   return MPORT_OK;
