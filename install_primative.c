@@ -171,7 +171,7 @@ static int do_actual_install(
   if (mport_db_do(db, "BEGIN TRANSACTION") != MPORT_OK) 
     goto ERROR;
 
-  /* Insert the package meta row into the packages table  - XXX Does not honor pack->prefix! */  
+  /* Insert the package meta row into the packages table (We use pack here because things might have been twiddled) */  
   if ((ret = mport_db_do(db, "INSERT INTO packages (pkg, version, origin, prefix, lang, options) VALUES (%Q,%Q,%Q,%Q,%Q,%Q)", pack->name, pack->version, pack->origin, pack->prefix, pack->lang, pack->options)) != MPORT_OK)
     goto ERROR;
   /* Insert the assets into the master table */
