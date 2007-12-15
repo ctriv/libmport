@@ -2,7 +2,7 @@
 
 LIB=		mport
 SRCS=		archive.c plist.c create_primative.c db.c util.c error.c \
-		install_primative.c inst_init.c version_cmp.c \
+		install_primative.c instance.c version_cmp.c \
 		check_preconditions.c
 
 INCS=		mport.h
