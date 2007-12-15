@@ -48,7 +48,7 @@ typedef struct {
 
 mportInstance * mport_new_instance(void);
 int mport_init_instance(mportInstance *, const char *);
-void mport_free_instance(mportInstance *);
+int mport_free_instance(mportInstance *);
 
 /* For now this is just the FreeBSD list, this will change soon. */
 enum _PlistEntryType { 

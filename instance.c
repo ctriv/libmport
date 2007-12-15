@@ -74,3 +74,15 @@ int mport_init_instance(mportInstance *mport, const char *root)
   /* create tables */
   return mport_generate_master_schema(mport->db);
 }
+
+
+int mport_free_instance(mportInstance *mport) {
+  if (sqlite3_close(mport->db) != MPORT_OK) {
+    free(mport);
+    RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(mport->db));
+  }
+  
+  free(mport);
+  return MPORT_OK;
+}
+

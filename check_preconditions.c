@@ -38,13 +38,13 @@ static int check_depends(sqlite3 *, mportPackageMeta *);
 
 
 
-int mport_check_update_preconditions(sqlite3 *db, mportPackageMeta *pack)
+int mport_check_update_preconditions(mportInstance *mport, mportPackageMeta *pack)
 {
-  if (check_if_older_installed(db, pack) != MPORT_OK)
+  if (check_if_older_installed(mport->db, pack) != MPORT_OK)
     RETURN_CURRENT_ERROR;
-  if (check_conflicts(db, pack) != MPORT_OK)
+  if (check_conflicts(mport->db, pack) != MPORT_OK)
     RETURN_CURRENT_ERROR;
-  if (check_depends(db, pack) != MPORT_OK)
+  if (check_depends(mport->db, pack) != MPORT_OK)
     RETURN_CURRENT_ERROR;
     
   return MPORT_OK;
@@ -54,13 +54,13 @@ int mport_check_update_preconditions(sqlite3 *db, mportPackageMeta *pack)
 /* check to see if the package is already installed, if it has any
  * conflicts, and that all its depends are installed.
  */
-int mport_check_install_preconditions(sqlite3 *db, mportPackageMeta *pack) 
+int mport_check_install_preconditions(mportInstance *mport, mportPackageMeta *pack) 
 {
-  if (check_if_installed(db, pack) != MPORT_OK)
+  if (check_if_installed(mport->db, pack) != MPORT_OK)
     RETURN_CURRENT_ERROR;
-  if (check_conflicts(db, pack) != MPORT_OK)
+  if (check_conflicts(mport->db, pack) != MPORT_OK)
     RETURN_CURRENT_ERROR;
-  if (check_depends(db, pack) != MPORT_OK)
+  if (check_depends(mport->db, pack) != MPORT_OK)
     RETURN_CURRENT_ERROR;
     
   return MPORT_OK;
