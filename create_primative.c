@@ -145,11 +145,8 @@ static int insert_plist(sqlite3 *db, mportPlist *plist, mportPackageMeta *pack)
     if (e->type == PLIST_FILE) {
       (void)snprintf(file, FILENAME_MAX, "%s/%s", cwd, e->data);
       
-      if (MD5File(file, md5) == NULL) {
-        char *error;
-        (void)asprintf(&error, "File not found: %s", file);
-        RETURN_ERROR(MPORT_ERR_FILE_NOT_FOUND, error);
-      }
+      if (MD5File(file, md5) == NULL) 
+        RETURN_ERRORX(MPORT_ERR_FILE_NOT_FOUND, "File not found: %s", file);
       
       if (sqlite3_bind_text(stmnt, 4, md5, -1, SQLITE_STATIC) != SQLITE_OK) {
         RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));

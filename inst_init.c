@@ -32,32 +32,45 @@
 #include <sys/stat.h>
 #include <errno.h>
 #include <string.h>
-#include <sqlite3.h>
+#include <stdlib.h>
 #include "mport.h"
 
 __MBSDID("$MidnightBSD: src/lib/libmport/inst_init.c,v 1.3 2007/12/05 17:02:15 ctriv Exp $");
 
 
-static int create_master_db(sqlite3 **);
-
 /* set up the master database, and related instance infrastructure. */
-int mport_inst_init(sqlite3 **db)
+mportInstance * mport_new_instance() 
 {
-  if (mport_mkdir(MPORT_INST_DIR) != MPORT_OK)
-    RETURN_CURRENT_ERROR;
-  
-  if (mport_mkdir(MPORT_INST_INFRA_DIR) != MPORT_OK)
-    RETURN_CURRENT_ERROR;
-  
-  return create_master_db(db);
+ return (mportInstance *)malloc(sizeof(mportInstance)); 
 }
-  
-  
-static int create_master_db(sqlite3 **db) 
+ 
+int mport_init_instance(mportInstance *mport, const char *root)
 {
-  if (mport_db_open_master(db) != MPORT_OK)
+  char dir[FILENAME_MAX];
+  
+  if (root != NULL) {
+    mport->root = strdup(root);
+    (void)snprintf(dir, FILENAME_MAX, "%s/%s", root, MPORT_INST_DIR);
+  } else {
+    mport->root = NULL;
+    (void)strlcpy(dir, MPORT_INST_DIR, FILENAME_MAX);
+  }
+  
+  if (mport_mkdir(dir) != MPORT_OK)
+    RETURN_CURRENT_ERROR;
+  
+  if (root != NULL) {
+    (void)snprintf(dir, FILENAME_MAX, "%s/%s", root, MPORT_INST_INFRA_DIR);
+  } else {
+    (void)strlcpy(dir, MPORT_INST_INFRA_DIR, FILENAME_MAX);
+  }
+  
+  if (mport_mkdir(dir) != MPORT_OK)
+    RETURN_CURRENT_ERROR;
+  
+  if (mport_db_open_master(&(mport->db)) != MPORT_OK)
     RETURN_CURRENT_ERROR;  
 
   /* create tables */
-  return mport_generate_master_schema(*db);
+  return mport_generate_master_schema(mport->db);
 }

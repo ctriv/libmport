@@ -40,6 +40,16 @@ __MBSDID("$MidnightBSD: src/lib/libmport/mport.h,v 1.8 2007/12/05 17:02:15 ctriv
 #include <stdio.h>
 
 
+/* Mport Instance (an installed copy of the mport system) */
+typedef struct {
+  sqlite3 *db;
+  const char *root;
+} mportInstance;
+
+mportInstance * mport_new_instance(void);
+int mport_init_instance(mportInstance *, const char *);
+void mport_free_instance(mportInstance *);
+
 /* For now this is just the FreeBSD list, this will change soon. */
 enum _PlistEntryType { 
   PLIST_INVALID, PLIST_FILE, PLIST_CWD, PLIST_CHMOD, PLIST_CHOWN, PLIST_CHGRP,
@@ -99,6 +109,9 @@ int mport_create_primative(mportPlist *, mportPackageMeta *);
 int mport_install_primative(const char *, const char *);
 
 
+/* Package deletion */
+int mport_delete_name_primative(const char *, int);
+
 /* precondition checking */
 int mport_check_update_preconditions(sqlite3 *, mportPackageMeta *);
 int mport_check_install_preconditions(sqlite3 *, mportPackageMeta *);
@@ -144,6 +157,7 @@ int mport_set_errx(int , const char *, ...);
 #define MPORT_ERR_MISSING_DEPEND	11
 #define MPORT_ERR_MALFORMED_VERSION	12
 #define MPORT_ERR_NO_SUCH_PKG		13
+#define MPORT_ERR_CHECKSUM_MISMATCH	14
 
 #define RETURN_CURRENT_ERROR return mport_err_code()
 #define RETURN_ERROR(code, msg) return mport_set_errx((code), "Error at %s:(%d): %s", __FILE__, __LINE__, (msg))
