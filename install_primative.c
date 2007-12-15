@@ -45,10 +45,10 @@ static int do_actual_install(struct archive *, struct archive_entry *, sqlite3 *
 static int do_post_install(sqlite3 *, mportPackageMeta *, const char *);
 static int run_pkg_install(const char *, mportPackageMeta *, const char *);
 static int run_mtree(const char *, mportPackageMeta *);
-static int clean_up(const char *);
+static int clean_up(mportInstance *, const char *);
 static int rollback(void);
 
-int mport_install_primative(const char *filename, const char *prefix) 
+int mport_install_primative(mportInstance *mport, const char *filename, const char *prefix) 
 {
   /* 
    * The general strategy here is to extract the meta-files into a tempdir, but
@@ -59,15 +59,11 @@ int mport_install_primative(const char *filename, const char *prefix)
   struct archive_entry *entry;
   char filepath[FILENAME_MAX];
   const char *file;
-  sqlite3 *db;
+  sqlite3 *db = mport->db;
   mportPackageMeta **packs;
   mportPackageMeta *pack;
   int i;
   
-  /* initialize our local mport instance */
-  if (mport_inst_init(&db) != MPORT_OK) 
-    RETURN_CURRENT_ERROR;
-
   /* extract the meta-files into the a temp dir */  
   char dirtmpl[] = "/tmp/mport.XXXXXXXX"; 
   char *tmpdir = mkdtemp(dirtmpl);
@@ -110,7 +106,7 @@ int mport_install_primative(const char *filename, const char *prefix)
     }
     
     /* check if this is installed already, depends, and conflicts */
-    if (mport_check_install_preconditions(db, pack) != MPORT_OK)
+    if (mport_check_install_preconditions(mport, pack) != MPORT_OK)
       RETURN_CURRENT_ERROR;
 
     /* Run mtree.  Run pkg-install. Etc... */
@@ -128,7 +124,7 @@ int mport_install_primative(const char *filename, const char *prefix)
   
   mport_free_packagemeta_vec(packs);
   
-  if (clean_up(tmpdir) != MPORT_OK)
+  if (clean_up(mport, tmpdir) != MPORT_OK)
     RETURN_CURRENT_ERROR;
   
   return MPORT_OK;
@@ -293,8 +289,11 @@ static int run_pkg_install(const char *tmpdir, mportPackageMeta *pack, const cha
 }
 
 
-static int clean_up(const char *tmpdir) 
+static int clean_up(mportInstance *mport, const char *tmpdir) 
 {
+  if (mport_detach_stub_db(mport->db) != MPORT_OK)
+    RETURN_CURRENT_ERROR;
+    
 #ifdef DEBUG
   return MPORT_OK;
 #else

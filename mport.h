@@ -106,15 +106,15 @@ int mport_create_primative(mportPlist *, mportPackageMeta *);
 
 
 /* Package installation */
-int mport_install_primative(const char *, const char *);
+int mport_install_primative(mportInstance *, const char *, const char *);
 
 
 /* Package deletion */
-int mport_delete_name_primative(const char *, int);
+int mport_delete_name_primative(mportInstance *, const char *, int);
 
 /* precondition checking */
-int mport_check_update_preconditions(sqlite3 *, mportPackageMeta *);
-int mport_check_install_preconditions(sqlite3 *, mportPackageMeta *);
+int mport_check_update_preconditions(mportInstance *, mportPackageMeta *);
+int mport_check_install_preconditions(mportInstance *, mportPackageMeta *);
 
 /* schema */
 int mport_generate_master_schema(sqlite3 *);
@@ -123,13 +123,11 @@ int mport_generate_stub_schema(sqlite3 *);
 /* Various database convience functions */
 int mport_db_open_master(sqlite3 **);
 int mport_attach_stub_db(sqlite3 *, const char *);
+int mport_detach_stub_db(sqlite3 *);
 int mport_get_meta_from_stub(sqlite3 *, mportPackageMeta ***);
 int mport_get_meta_from_master(sqlite3 *, mportPackageMeta**, const char *);
 int mport_db_do(sqlite3 *, const char *, ...);
 int mport_db_prepare(sqlite3 *, sqlite3_stmt **, const char *, ...);
-
-/* instance init */
-int mport_inst_init(sqlite3 **);
 
 
 /* version comparing */

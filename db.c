@@ -131,13 +131,30 @@ int mport_attach_stub_db(sqlite3 *db, const char *dir)
   asprintf(&file, "%s/%s", dir, MPORT_STUB_DB_FILE);
   
   if (mport_db_do(db, "ATTACH %Q AS stub", file) != MPORT_OK) { 
-    RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
+    free(file);
+    RETURN_CURRENT_ERROR;
   }
   
   free(file);
   
   return MPORT_OK;
 }
+
+
+/* mport_detach_stub_db(sqlite *db) 
+ *
+ * The inverse of mport_attach_stub_db().
+ *
+ * Returns MPORT_OK on success.
+ */
+int mport_detach_stub_db(sqlite3 *db)
+{
+  if (mport_db_do(db, "DETACH stub") != MPORT_OK) 
+    RETURN_CURRENT_ERROR;
+  
+  return MPORT_OK;
+}
+
 
 
 /* mport_get_meta_from_stub(sqlite *db, mportPackageMeta ***pack)
