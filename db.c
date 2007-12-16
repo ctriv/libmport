@@ -41,25 +41,6 @@ __MBSDID("$MidnightBSD: src/lib/libmport/db.c,v 1.2 2007/12/05 17:02:15 ctriv Ex
 static int populate_meta_from_stmt(mportPackageMeta *, sqlite3 *, sqlite3_stmt *);
 
 
-/* mport_db_open_master(sqlite3 **)
- * 
- * Open the master database file, or create the file if it doesn't exist.
- * Note that this function will not create the schema for you, if you need
- * to create the schema use mport_inst_init() instead.
- */
-int mport_db_open_master(sqlite3 **db)
-{
-  if (sqlite3_open(MPORT_MASTER_DB_FILE, db) != 0) {
-    sqlite3_close(*db);
-    RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(*db));
-  }
-  
-  return MPORT_OK;
-}
-
-
-
-
 /* mport_db_do(sqlite3 *db, const char *sql, ...)
  * 
  * A wrapper for doing executing a single sql query.  Takes a sqlite3 struct

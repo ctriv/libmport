@@ -40,11 +40,11 @@
 
 __MBSDID("$MidnightBSD: src/lib/libmport/install_pkg.c,v 1.4 2007/12/01 06:21:37 ctriv Exp $");
 
-static int do_pre_install(sqlite3 *, mportPackageMeta *, const char *);
-static int do_actual_install(struct archive *, struct archive_entry *, sqlite3 *, mportPackageMeta *, const char *);
-static int do_post_install(sqlite3 *, mportPackageMeta *, const char *);
-static int run_pkg_install(const char *, mportPackageMeta *, const char *);
-static int run_mtree(const char *, mportPackageMeta *);
+static int do_pre_install(mportInstance *, mportPackageMeta *, const char *);
+static int do_actual_install(mportInstance *, struct archive *, struct archive_entry *, mportPackageMeta *, const char *);
+static int do_post_install(mportInstance *, mportPackageMeta *, const char *);
+static int run_pkg_install(mportInstance *, const char *, mportPackageMeta *, const char *);
+static int run_mtree(mportInstance *, const char *, mportPackageMeta *);
 static int clean_up(mportInstance *, const char *);
 static int rollback(void);
 
@@ -110,15 +110,15 @@ int mport_install_primative(mportInstance *mport, const char *filename, const ch
       RETURN_CURRENT_ERROR;
 
     /* Run mtree.  Run pkg-install. Etc... */
-    if (do_pre_install(db, pack, tmpdir) != MPORT_OK)
+    if (do_pre_install(mport, pack, tmpdir) != MPORT_OK)
       RETURN_CURRENT_ERROR;
 
-    if (do_actual_install(a, entry, db, pack, tmpdir) != MPORT_OK)
+    if (do_actual_install(mport, a, entry, pack, tmpdir) != MPORT_OK)
       RETURN_CURRENT_ERROR;
     
     archive_read_finish(a);
     
-    if (do_post_install(db, pack, tmpdir) != MPORT_OK)
+    if (do_post_install(mport, pack, tmpdir) != MPORT_OK)
       RETURN_CURRENT_ERROR;
   } 
   
@@ -133,16 +133,16 @@ int mport_install_primative(mportInstance *mport, const char *filename, const ch
 /* This does everything that has to happen before we start installing files.
  * We run mtree, pkg-install PRE-INSTALL, etc... 
  */
-static int do_pre_install(sqlite3 *db, mportPackageMeta *pack, const char *tmpdir)
+static int do_pre_install(mportInstance *mport, mportPackageMeta *pack, const char *tmpdir)
 {
   int ret = MPORT_OK;
   
   /* run mtree */
-  if ((ret = run_mtree(tmpdir, pack)) != MPORT_OK)
+  if ((ret = run_mtree(mport, tmpdir, pack)) != MPORT_OK)
     return ret;
   
   /* run pkg-install PRE-INSTALL */
-  if ((ret = run_pkg_install(tmpdir, pack, "PRE-INSTALL")) != MPORT_OK)
+  if ((ret = run_pkg_install(mport, tmpdir, pack, "PRE-INSTALL")) != MPORT_OK)
     return ret;
 
   return ret;    
@@ -150,9 +150,9 @@ static int do_pre_install(sqlite3 *db, mportPackageMeta *pack, const char *tmpdi
 
 
 static int do_actual_install(
+      mportInstance *mport, 
       struct archive *a, 
       struct archive_entry *entry,
-      sqlite3 *db, 
       mportPackageMeta *pack, 
       const char *tmpdir
     )
@@ -162,7 +162,10 @@ static int do_actual_install(
   char *data, *cwd;
   char file[FILENAME_MAX];
   sqlite3_stmt *assets;
-
+  sqlite3 *db;
+  
+  
+  db = mport->db;
   
   if (mport_db_do(db, "BEGIN TRANSACTION") != MPORT_OK) 
     goto ERROR;
@@ -195,7 +198,7 @@ static int do_actual_install(
         }
         break;
       case PLIST_EXEC:
-        if ((ret = mport_run_plist_exec(data, cwd, file)) != MPORT_OK)
+        if ((ret = mport_run_plist_exec(mport, data, cwd, file)) != MPORT_OK)
           goto ERROR;
         break;
       case PLIST_FILE:
@@ -206,7 +209,7 @@ static int do_actual_install(
           ret = SET_ERROR(MPORT_ERR_INTERNAL, "Plist to arhive mismatch!");
           goto ERROR; 
         } 
-        (void)snprintf(file, FILENAME_MAX, "%s/%s", cwd, data);
+        (void)snprintf(file, FILENAME_MAX, "%s%s/%s", mport->root, cwd, data);
         archive_entry_set_pathname(entry, file);
         if ((ret = archive_read_extract(a, entry, ARCHIVE_EXTRACT_OWNER|ARCHIVE_EXTRACT_PERM)) != ARCHIVE_OK) {
           ret = SET_ERROR(MPORT_ERR_ARCHIVE, archive_error_string(a));
@@ -237,13 +240,13 @@ static int do_actual_install(
     return ret;
 }           
 
-static int do_post_install(sqlite3 *db, mportPackageMeta *pack, const char *tmpdir)
+static int do_post_install(mportInstance *mport, mportPackageMeta *pack, const char *tmpdir)
 {
   char to[FILENAME_MAX], from[FILENAME_MAX];
   (void)snprintf(from, FILENAME_MAX, "%s/%s/%s-%s/%s", tmpdir, MPORT_STUB_INFRA_DIR, pack->name, pack->version, MPORT_DEINSTALL_FILE);
   
   if (mport_file_exists(from)) {
-    (void)snprintf(to, FILENAME_MAX, "%s/%s-%s/%s", MPORT_INST_INFRA_DIR, pack->name, pack->version, MPORT_DEINSTALL_FILE);
+    (void)snprintf(to, FILENAME_MAX, "%s%s/%s-%s/%s", mport->root, MPORT_INST_INFRA_DIR, pack->name, pack->version, MPORT_DEINSTALL_FILE);
     
     if (mport_mkdir(dirname(to)) != MPORT_OK)
       RETURN_CURRENT_ERROR;
@@ -252,12 +255,12 @@ static int do_post_install(sqlite3 *db, mportPackageMeta *pack, const char *tmpd
       RETURN_CURRENT_ERROR;
   }
   
-  return run_pkg_install(tmpdir, pack, "POST-INSTALL");
+  return run_pkg_install(mport, tmpdir, pack, "POST-INSTALL");
 }
 
 
       
-static int run_mtree(const char *tmpdir, mportPackageMeta *pack)
+static int run_mtree(mportInstance *mport, const char *tmpdir, mportPackageMeta *pack)
 {
   char file[FILENAME_MAX];
   int ret;
@@ -265,7 +268,7 @@ static int run_mtree(const char *tmpdir, mportPackageMeta *pack)
   (void)snprintf(file, FILENAME_MAX, "%s/%s/%s-%s/%s", tmpdir, MPORT_STUB_INFRA_DIR, pack->name, pack->version, MPORT_MTREE_FILE);
   
   if (mport_file_exists(file)) {
-    if ((ret = mport_xsystem("%s -U -f %s -d -e -p %s >/dev/null", MPORT_MTREE_BIN, file, pack->prefix)) != 0) 
+    if ((ret = mport_xsystem(mport, "%s -U -f %s -d -e -p %s >/dev/null", MPORT_MTREE_BIN, file, pack->prefix)) != 0) 
       RETURN_ERRORX(MPORT_ERR_SYSCALL_FAILED, "%s returned non-zero: %i", MPORT_MTREE_BIN, ret);
   }
   
@@ -273,20 +276,22 @@ static int run_mtree(const char *tmpdir, mportPackageMeta *pack)
 }
 
 
-static int run_pkg_install(const char *tmpdir, mportPackageMeta *pack, const char *mode)
+
+static int run_pkg_install(mportInstance *mport, const char *tmpdir, mportPackageMeta *pack, const char *mode)
 {
   char file[FILENAME_MAX];
   int ret;
   
   (void)snprintf(file, FILENAME_MAX, "%s/%s/%s-%s/%s", tmpdir, MPORT_STUB_INFRA_DIR, pack->name, pack->version, MPORT_INSTALL_FILE);    
-
+ 
   if (mport_file_exists(file)) {
-    if ((ret = mport_xsystem("PKG_PREFIX=%s %s %s %s", pack->prefix, MPORT_SH_BIN, file, mode)) != 0)
-      RETURN_ERRORX(MPORT_ERR_SYSCALL_FAILED, "%s %s returned non-zero: %i", MPORT_INSTALL_FILE, mode, ret);
+   if ((ret = mport_xsystem(mport, "PKG_PREFIX=%s %s %s %s", pack->prefix, MPORT_SH_BIN, file, mode)) != 0)
+     RETURN_ERRORX(MPORT_ERR_SYSCALL_FAILED, "%s %s returned non-zero: %i", MPORT_INSTALL_FILE, mode, ret);
   }
   
-  return MPORT_OK;
+ return MPORT_OK;
 }
+ 
 
 
 static int clean_up(mportInstance *mport, const char *tmpdir) 

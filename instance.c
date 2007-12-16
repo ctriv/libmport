@@ -50,27 +50,27 @@ int mport_init_instance(mportInstance *mport, const char *root)
   
   if (root != NULL) {
     mport->root = strdup(root);
-    (void)snprintf(dir, FILENAME_MAX, "%s/%s", root, MPORT_INST_DIR);
   } else {
-    mport->root = NULL;
-    (void)strlcpy(dir, MPORT_INST_DIR, FILENAME_MAX);
+    mport->root = "";
   }
-  
-  if (mport_mkdir(dir) != MPORT_OK)
-    RETURN_CURRENT_ERROR;
-  
-  if (root != NULL) {
-    (void)snprintf(dir, FILENAME_MAX, "%s/%s", root, MPORT_INST_INFRA_DIR);
-  } else {
-    (void)strlcpy(dir, MPORT_INST_INFRA_DIR, FILENAME_MAX);
-  }
-  
-  if (mport_mkdir(dir) != MPORT_OK)
-    RETURN_CURRENT_ERROR;
-  
-  if (mport_db_open_master(&(mport->db)) != MPORT_OK)
-    RETURN_CURRENT_ERROR;  
 
+  (void)snprintf(dir, FILENAME_MAX, "%s/%s", mport->root, MPORT_INST_DIR);
+
+  if (mport_mkdir(dir) != MPORT_OK)
+    RETURN_CURRENT_ERROR;
+  
+  (void)snprintf(dir, FILENAME_MAX, "%s/%s", mport->root, MPORT_INST_INFRA_DIR);
+  
+  if (mport_mkdir(dir) != MPORT_OK)
+    RETURN_CURRENT_ERROR;
+
+  /* dir is a file here, just trying to save memory */
+  (void)snprintf(dir, FILENAME_MAX, "%s/%s", mport->root, MPORT_MASTER_DB_FILE);
+  if (sqlite3_open(MPORT_MASTER_DB_FILE, &(mport->db)) != 0) {
+    sqlite3_close(mport->db);
+    RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(mport->db));
+  }
+  
   /* create tables */
   return mport_generate_master_schema(mport->db);
 }

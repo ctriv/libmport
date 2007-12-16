@@ -83,7 +83,7 @@ void mport_free_packagemeta_vec(mportPackageMeta **vec)
  */
 int mport_rmtree(const char *filename) 
 {
-  return mport_xsystem("/bin/rm -r %s", filename);
+  return mport_xsystem(NULL, "/bin/rm -r %s", filename);
 }  
 
 
@@ -93,7 +93,7 @@ int mport_rmtree(const char *filename)
  */
 int mport_copy_file(const char *fromname, const char *toname)
 {
-  return mport_xsystem("/bin/cp %s %s", fromname, toname);
+  return mport_xsystem(NULL, "/bin/cp %s %s", fromname, toname);
 }
 
 
@@ -124,22 +124,36 @@ int mport_file_exists(const char *file)
 }
 
 
-/* mport_xsystem(char *fmt, ...)
+/* mport_xsystem(mportInstance *mport, char *fmt, ...)
  * 
  * Our own version on system that takes a format string and a list 
  * of values.  The fmt works exactly like the stdio output formats.
+ * 
+ * If mport is non-NULL and has a root set, your command will run 
+ * chroot'ed into mport->root.
  */
-int mport_xsystem(const char *fmt, ...) 
+int mport_xsystem(mportInstance *mport, const char *fmt, ...) 
 {
   va_list args;
   char *cmnd;
   int ret;
   
   va_start(args, fmt);
+  
   if (vasprintf(&cmnd, fmt, args) == -1) {
     /* XXX How will the caller know this is no mem, and not a failed exec? */
     return MPORT_ERR_NO_MEM;
   }
+ 
+  if (mport != NULL && *(mport->root) != '\0') {
+    char *chroot_cmd;
+    if (asprintf(&chroot_cmd, "%s %s %s", MPORT_CHROOT_BIN, mport->root, cmnd) == -1)
+      return MPORT_ERR_NO_MEM;
+  
+    free(cmnd);
+    cmnd = chroot_cmd;
+  }
+    
   
   ret = system(cmnd);
   
@@ -213,7 +227,7 @@ void mport_parselist(char *opt, char ***list)
  * %B	Return the directory part ("dirname") of %D/%F
  * %f	Return the filename part of ("basename") %D/%F
  */
-int mport_run_plist_exec(const char *fmt, const char *cwd, const char *last_file) 
+int mport_run_plist_exec(mportInstance *mport, const char *fmt, const char *cwd, const char *last_file) 
 {
   size_t l;
   size_t max = FILENAME_MAX * 2;
@@ -268,6 +282,6 @@ int mport_run_plist_exec(const char *fmt, const char *cwd, const char *last_file
   *pos = '\0';
   
   /* cmnd now hold the expaded command, now execute it*/
-  return mport_xsystem(cmnd);
+  return mport_xsystem(mport, cmnd);
 }          
 

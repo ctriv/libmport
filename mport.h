@@ -121,7 +121,6 @@ int mport_generate_master_schema(sqlite3 *);
 int mport_generate_stub_schema(sqlite3 *);
 
 /* Various database convience functions */
-int mport_db_open_master(sqlite3 **);
 int mport_attach_stub_db(sqlite3 *, const char *);
 int mport_detach_stub_db(sqlite3 *);
 int mport_get_meta_from_stub(sqlite3 *, mportPackageMeta ***);
@@ -169,9 +168,9 @@ int mport_copy_file(const char *, const char *);
 int mport_rmtree(const char *);
 int mport_mkdir(const char *);
 int mport_file_exists(const char *);
-int mport_xsystem(const char *, ...);
+int mport_xsystem(mportInstance *mport, const char *, ...);
 void mport_parselist(char *, char ***);
-int mport_run_plist_exec(const char *, const char *, const char *);
+int mport_run_plist_exec(mportInstance *mport, const char *, const char *, const char *);
 
 
 /* archive helpers */
@@ -195,5 +194,6 @@ int mport_add_file_to_archive(struct archive *, const char *, const char *);
 /* Binaries we use */
 #define MPORT_MTREE_BIN		"/usr/sbin/mtree"
 #define MPORT_SH_BIN		"/bin/sh"
+#define MPORT_CHROOT_BIN	"/usr/sbin/chroot"
 
 #endif /* ! defined _MPORT_H */
