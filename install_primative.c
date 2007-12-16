@@ -191,11 +191,7 @@ static int do_actual_install(
       
     switch (type) {
       case PLIST_CWD:      
-        if (data == NULL) {
-          cwd = pack->prefix;
-        } else {
-          cwd = data;
-        }
+        cwd = data == NULL ? pack->prefix : data;
         break;
       case PLIST_EXEC:
         if ((ret = mport_run_plist_exec(mport, data, cwd, file)) != MPORT_OK)
