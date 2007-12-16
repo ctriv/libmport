@@ -51,7 +51,8 @@ int mport_init_instance(mportInstance *mport, const char *root)
   if (root != NULL) {
     mport->root = strdup(root);
   } else {
-    mport->root = "";
+    mport->root = malloc(sizeof(char));
+    *(mport->root) = '\0';
   }
 
   (void)snprintf(dir, FILENAME_MAX, "%s/%s", mport->root, MPORT_INST_DIR);
@@ -77,11 +78,11 @@ int mport_init_instance(mportInstance *mport, const char *root)
 
 
 int mport_free_instance(mportInstance *mport) {
-  if (sqlite3_close(mport->db) != MPORT_OK) {
-    free(mport);
+  if (sqlite3_close(mport->db) != SQLITE_OK) {
     RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(mport->db));
   }
   
+  free(mport->root);  
   free(mport);
   return MPORT_OK;
 }
