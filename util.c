@@ -111,8 +111,26 @@ int mport_mkdir(const char *dir)
   
   return MPORT_OK;
 }
-  
 
+
+/*
+ * mport_rmdir(dir, ignore_nonempty)
+ *
+ * delete the given directory.  If ignore_nonempty is non-zero, then
+ * we return OK even if we couldn't delete the dir because it wasn't empty
+ */
+int mport_rmdir(const char *dir, int ignore_nonempty)
+{
+  if (rmdir(dir) != 0) {
+    if (ignore_nonempty && errno == ENOTEMPTY) {
+      return MPORT_OK;
+    } else {
+      RETURN_ERROR(MPORT_ERR_SYSCALL_FAILED, strerror(errno));
+    }
+  } 
+  
+  return MPORT_OK;
+}
 /*
  * Quick test to see if a file exists.
  */

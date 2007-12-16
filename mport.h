@@ -111,6 +111,7 @@ int mport_install_primative(mportInstance *, const char *, const char *);
 
 /* Package deletion */
 int mport_delete_name_primative(mportInstance *, const char *, int);
+int mport_delete_primative(mportInstance *, mportPackageMeta *, int);
 
 /* precondition checking */
 int mport_check_update_preconditions(mportInstance *, mportPackageMeta *);
@@ -167,6 +168,7 @@ int mport_set_errx(int , const char *, ...);
 int mport_copy_file(const char *, const char *);
 int mport_rmtree(const char *);
 int mport_mkdir(const char *);
+int mport_rmdir(const char *, int);
 int mport_file_exists(const char *);
 int mport_xsystem(mportInstance *mport, const char *, ...);
 void mport_parselist(char *, char ***);
