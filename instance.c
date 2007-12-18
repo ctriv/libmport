@@ -52,7 +52,7 @@ int mport_init_instance(mportInstance *mport, const char *root)
     mport->root = strdup(root);
   } else {
     mport->root = malloc(sizeof(char));
-    *(mport->root) = '\0';
+    mport->root = "";
   }
 
   (void)snprintf(dir, FILENAME_MAX, "%s/%s", mport->root, MPORT_INST_DIR);

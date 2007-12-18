@@ -43,7 +43,7 @@ __MBSDID("$MidnightBSD: src/lib/libmport/mport.h,v 1.8 2007/12/05 17:02:15 ctriv
 /* Mport Instance (an installed copy of the mport system) */
 typedef struct {
   sqlite3 *db;
-  const char *root;
+  char *root;
 } mportInstance;
 
 mportInstance * mport_new_instance(void);
