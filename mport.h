@@ -39,16 +39,27 @@ __MBSDID("$MidnightBSD: src/lib/libmport/mport.h,v 1.8 2007/12/05 17:02:15 ctriv
 #include <sys/queue.h>
 #include <stdio.h>
 
+typedef void (*mport_msg_cb)(const char *);
+typedef void (*mport_progress_cb)(int, int, const char *);
+typedef int (*mport_confirm_cb)(const char *, const char *, const char *);
 
 /* Mport Instance (an installed copy of the mport system) */
 typedef struct {
   sqlite3 *db;
   char *root;
+  mport_msg_cb msg_cb;
+  mport_progress_cb progress_cb;
+  mport_confirm_cb  confirm_cb;
 } mportInstance;
 
 mportInstance * mport_new_instance(void);
 int mport_init_instance(mportInstance *, const char *);
 int mport_free_instance(mportInstance *);
+
+void mport_set_msg_cb(mportInstance *, mport_msg_cb);
+void mport_set_progress_cb(mportInstance *, mport_progress_cb);
+void mport_set_confirm_cb(mportInstance *, mport_confirm_cb);
+
 
 /* For now this is just the FreeBSD list, this will change soon. */
 enum _PlistEntryType { 
