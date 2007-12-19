@@ -34,6 +34,7 @@
 #include <string.h>
 #include <sqlite3.h>
 #include <md5.h>
+#include <stdlib.h>
 #include "mport.h"
 
 __MBSDID("$MidnightBSD: src/lib/libmport/inst_init.c,v 1.1 2007/11/22 08:00:32 ctriv Exp $");
@@ -183,23 +184,28 @@ static int run_pkg_deinstall(mportInstance *mport, mportPackageMeta *pack, const
 static int check_for_upwards_depends(mportInstance *mport, mportPackageMeta *pack)
 {
   sqlite3_stmt *stmt;
-  char *depends;
+  char *depends, *msg;
   int count;
-    
+      
   if (mport_db_prepare(mport->db, &stmt, "SELECT group_concat(name),count(name) FROM depends JOIN depends.pkg=packages.name WHERE depend_pkgname=%Q", pack->name) != MPORT_OK)
     RETURN_CURRENT_ERROR;
   
   switch (sqlite3_step(stmt)) {
     case SQLITE_ROW:
       depends = (char *)sqlite3_column_text(stmt, 0);
-      count   = (int)sqlite3_column_text(stmt, 1);
+      count   = sqlite3_column_int(stmt, 1);
       
-      /* what to do here */
+      if (count != 0) {
+        (void)asprintf(&msg, "%s depend on %s, delete anyway?", depends, pack->name);
+        if ((mport->confirm_cb)(msg, "Delete", "Don't delete") != MPORT_OK) {
+          sqlite3_finalize(stmt);
+          free(msg);
+          RETURN_ERRORX(MPORT_ERR_UPWARDS_DEPENDS, "%s depend on %s", depends, pack->name);
+        }
+        free(msg);
+      }
       
       break;    
-    case SQLITE_DONE:
-      /* no upwards depends; do nothing */
-      break;
     default:
       SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(mport->db));
       sqlite3_finalize(stmt);

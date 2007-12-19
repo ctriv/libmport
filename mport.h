@@ -41,7 +41,7 @@ __MBSDID("$MidnightBSD: src/lib/libmport/mport.h,v 1.8 2007/12/05 17:02:15 ctriv
 
 typedef void (*mport_msg_cb)(const char *);
 typedef void (*mport_progress_cb)(int, int, const char *);
-typedef int (*mport_confirm_cb)(const char *, const char *, const char *);
+typedef int (*mport_confirm_cb)(const char *, const char *, const char *, int);
 
 /* Mport Instance (an installed copy of the mport system) */
 typedef struct {
@@ -59,6 +59,9 @@ int mport_free_instance(mportInstance *);
 void mport_set_msg_cb(mportInstance *, mport_msg_cb);
 void mport_set_progress_cb(mportInstance *, mport_progress_cb);
 void mport_set_confirm_cb(mportInstance *, mport_confirm_cb);
+
+void mport_default_msg_cb(const char *);
+int mport_default_confirm_cb(const char *, const char *, const char *, int);
 
 
 /* For now this is just the FreeBSD list, this will change soon. */
@@ -167,6 +170,7 @@ int mport_set_errx(int , const char *, ...);
 #define MPORT_ERR_MALFORMED_VERSION	12
 #define MPORT_ERR_NO_SUCH_PKG		13
 #define MPORT_ERR_CHECKSUM_MISMATCH	14
+#define MPORT_ERR_UPWARDS_DEPENDS	15
 
 #define RETURN_CURRENT_ERROR return mport_err_code()
 #define RETURN_ERROR(code, msg) return mport_set_errx((code), "Error at %s:(%d): %s", __FILE__, __LINE__, (msg))
