@@ -146,7 +146,21 @@ int mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int for
   }
   
   sqlite3_finalize(stmt);
-  return run_pkg_deinstall(mport, pack, "POST-DEINSTALL");        
+  
+  if (run_pkg_deinstall(mport, pack, "POST-DEINSTALL") != MPORT_OK)
+    RETURN_CURRENT_ERROR;
+    
+  if (mport_db_do(mport->db, "DELETE FROM assets WHERE pkg=%Q", pack->name) != MPORT_OK)
+    RETURN_CURRENT_ERROR;
+  
+  if (mport_db_do(mport->db, "DELETE FROM depends WHERE pkg=%Q", pack->name) != MPORT_OK)
+    RETURN_CURRENT_ERROR;
+  
+  if (mport_db_do(mport->db, "DELETE FROM packages WHERE pkg=%Q", pack->name) != MPORT_OK)
+    RETURN_CURRENT_ERROR;
+    
+  return MPORT_OK;
+    
 } 
   
 
@@ -168,6 +182,32 @@ static int run_pkg_deinstall(mportInstance *mport, mportPackageMeta *pack, const
 
 static int check_for_upwards_depends(mportInstance *mport, mportPackageMeta *pack)
 {
-  /* XXX - write me */
+  sqlite3_stmt *stmt;
+  char *depends;
+  int count;
+    
+  if (mport_db_prepare(mport->db, &stmt, "SELECT group_concat(name),count(name) FROM depends JOIN depends.pkg=packages.name WHERE depend_pkgname=%Q", pack->name) != MPORT_OK)
+    RETURN_CURRENT_ERROR;
+  
+  switch (sqlite3_step(stmt)) {
+    case SQLITE_ROW:
+      depends = (char *)sqlite3_column_text(stmt, 0);
+      count   = (int)sqlite3_column_text(stmt, 1);
+      
+      /* what to do here */
+      
+      break;    
+    case SQLITE_DONE:
+      /* no upwards depends; do nothing */
+      break;
+    default:
+      SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(mport->db));
+      sqlite3_finalize(stmt);
+      RETURN_CURRENT_ERROR;
+  }
+  
+  sqlite3_finalize(stmt);
   return MPORT_OK;
-}
+} 
+      
+  
