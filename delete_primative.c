@@ -76,6 +76,9 @@ int mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int for
     if (check_for_upwards_depends(mport, pack) != MPORT_OK)
       RETURN_CURRENT_ERROR;
   }
+
+  if (run_pkg_deinstall(mport, pack, "DEINSTALL") != MPORT_OK)
+    RETURN_CURRENT_ERROR;
   
   if (mport_db_prepare(mport->db, &stmt, "SELECT type,data,checksum FROM assets WHERE pkg=?", pack->name) != MPORT_OK)
     RETURN_CURRENT_ERROR;  
