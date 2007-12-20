@@ -88,8 +88,9 @@ int mport_db_prepare(sqlite3 *db, sqlite3_stmt **stmt, const char * fmt, ...)
   }
   
   if (sqlite3_prepare_v2(db, sql, -1, stmt, NULL) != SQLITE_OK) {
+    SET_ERRORX(MPORT_ERR_SQLITE, "sql error preparing '%s': %s", sql, sqlite3_errmsg(db));
     sqlite3_free(sql);
-    RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
+    RETURN_CURRENT_ERROR;
   }
   
   sqlite3_free(sql);
@@ -204,7 +205,7 @@ int mport_get_meta_from_master(sqlite3 *db, mportPackageMeta **pack, const char 
   sqlite3_stmt *stmt;
   int ret;
   
-  if (mport_db_prepare(db, &stmt, "SELECT pkg, version, lang, prefix FROM packages WHERE pkg=%Q", name) != MPORT_OK)
+  if (mport_db_prepare(db, &stmt, "SELECT pkg, version, origin, lang, prefix FROM packages WHERE pkg=%Q", name) != MPORT_OK)
     RETURN_CURRENT_ERROR;
   
   switch (sqlite3_step(stmt)) {

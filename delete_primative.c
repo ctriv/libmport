@@ -53,7 +53,6 @@ int mport_delete_name_primative(mportInstance *mport, const char *name, int forc
     RETURN_CURRENT_ERROR;
   
   if (pkg == NULL) {
-    mport_free_packagemeta(pkg);
     RETURN_ERRORX(MPORT_ERR_NO_SUCH_PKG, "Package %s is not installed.", name);
   }
   
@@ -187,7 +186,7 @@ static int check_for_upwards_depends(mportInstance *mport, mportPackageMeta *pac
   char *depends, *msg;
   int count;
       
-  if (mport_db_prepare(mport->db, &stmt, "SELECT group_concat(name),count(name) FROM depends JOIN depends.pkg=packages.name WHERE depend_pkgname=%Q", pack->name) != MPORT_OK)
+  if (mport_db_prepare(mport->db, &stmt, "SELECT group_concat(packages.pkg),count(packages.pkg) FROM depends JOIN packages ON depends.pkg=packages.pkg WHERE depend_pkgname=%Q", pack->name) != MPORT_OK)
     RETURN_CURRENT_ERROR;
   
   switch (sqlite3_step(stmt)) {
@@ -197,7 +196,7 @@ static int check_for_upwards_depends(mportInstance *mport, mportPackageMeta *pac
       
       if (count != 0) {
         (void)asprintf(&msg, "%s depend on %s, delete anyway?", depends, pack->name);
-        if ((mport->confirm_cb)(msg, "Delete", "Don't delete") != MPORT_OK) {
+        if ((mport->confirm_cb)(msg, "Delete", "Don't delete", 0) != MPORT_OK) {
           sqlite3_finalize(stmt);
           free(msg);
           RETURN_ERRORX(MPORT_ERR_UPWARDS_DEPENDS, "%s depend on %s", depends, pack->name);
