@@ -112,7 +112,7 @@ static int check_conflicts(sqlite3 *db, mportPackageMeta *pack)
   int ret;
   const char *inst_name, *inst_version;
   
-  if (mport_db_prepare(db, &stmt, "SELECT packages.name, packages.version FROM stub.conflicts LEFT JOIN packages ON packages.name GLOB stub.conflicts.conflict_pkg AND packages.version GLOB stub.conflicts.conflict_version WHERE packages.name IS NOT NULL") != MPORT_OK) 
+  if (mport_db_prepare(db, &stmt, "SELECT packages.pkg, packages.version FROM stub.conflicts LEFT JOIN packages ON packages.pkg GLOB stub.conflicts.conflict_pkg AND packages.version GLOB stub.conflicts.conflict_version WHERE packages.pkg IS NOT NULL") != MPORT_OK) 
     RETURN_CURRENT_ERROR;
   
   while (1) {
@@ -149,7 +149,7 @@ static int check_depends(sqlite3 *db, mportPackageMeta *pack)
   /* check for depends */
   if (mport_db_prepare(db, &stmt, "SELECT depend_pkgname, depend_pkgversion FROM stub.depends") != MPORT_OK) 
     RETURN_CURRENT_ERROR;
-    
+ 
   if (mport_db_prepare(db, &lookup, "SELECT version FROM packages WHERE pkg=?") != MPORT_OK) {
     sqlite3_finalize(stmt);
     RETURN_CURRENT_ERROR;
