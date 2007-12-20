@@ -79,9 +79,9 @@ static int check_if_installed(sqlite3 *db, mportPackageMeta *pack)
   const char *inst_version;
   
   /* check if the package is already installed */
-  if (mport_db_prepare(db, &stmt, "SELECT version FROM packages WHERE pkg=?", pack->name) != MPORT_OK) 
+  if (mport_db_prepare(db, &stmt, "SELECT version FROM packages WHERE pkg=%Q", pack->name) != MPORT_OK) 
     RETURN_CURRENT_ERROR;
-  
+
   switch (sqlite3_step(stmt)) {
     case SQLITE_DONE:
       /* No row found.  Do nothing */
@@ -89,7 +89,7 @@ static int check_if_installed(sqlite3 *db, mportPackageMeta *pack)
     case SQLITE_ROW:
       /* Row was found */
       inst_version = sqlite3_column_text(stmt, 0);
-
+      
       SET_ERRORX(MPORT_ERR_ALREADY_INSTALLED, "%s (version %s) is already installed.", pack->name, inst_version);
       sqlite3_finalize(stmt);
       RETURN_CURRENT_ERROR;
