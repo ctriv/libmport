@@ -54,15 +54,20 @@ void mport_free_packagemeta(mportPackageMeta *pack)
   free(pack->sourcedir);
   free(pack->desc);
   free(pack->prefix);
-  free(*(pack->depends));
   free(pack->depends);
   free(pack->mtree);
   free(pack->origin);
-  free(*(pack->conflicts));
   free(pack->conflicts);
   free(pack->pkginstall);
   free(pack->pkgdeinstall);
   free(pack->pkgmessage);
+  
+  if (pack->conflicts != NULL)
+    free(*(pack->conflicts));
+  
+  if (pack->depends != NULL)
+    free(*(pack->depends));
+
   free(pack);
 }
 
@@ -172,7 +177,6 @@ int mport_xsystem(mportInstance *mport, const char *fmt, ...)
     cmnd = chroot_cmd;
   }
     
-  
   ret = system(cmnd);
   
   free(cmnd);
