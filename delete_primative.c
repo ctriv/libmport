@@ -57,7 +57,7 @@ int mport_delete_name_primative(mportInstance *mport, const char *name, int forc
   }
   
   ret = mport_delete_primative(mport, pkg, force);
-  
+
   mport_free_packagemeta(pkg);
   
   return ret;
@@ -80,11 +80,11 @@ int mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int for
   if (run_pkg_deinstall(mport, pack, "DEINSTALL") != MPORT_OK)
     RETURN_CURRENT_ERROR;
   
-  if (mport_db_prepare(mport->db, &stmt, "SELECT type,data,checksum FROM assets WHERE pkg=?", pack->name) != MPORT_OK)
+  if (mport_db_prepare(mport->db, &stmt, "SELECT type,data,checksum FROM assets WHERE pkg=%Q", pack->name) != MPORT_OK)
     RETURN_CURRENT_ERROR;  
   
   cwd = pack->prefix;
-    
+
   while (1) {
     ret = sqlite3_step(stmt);
     
@@ -107,6 +107,7 @@ int mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int for
         cwd = data == NULL ? pack->prefix : data;
         break;
       case PLIST_FILE:
+        (void)snprintf(file, FILENAME_MAX, "%s%s/%s", mport->root, cwd, data);
         if (MD5File(file, md5) == NULL) {
           sqlite3_finalize(stmt);
           RETURN_ERRORX(MPORT_ERR_FILE_NOT_FOUND, "File not found: %s", file);
@@ -121,7 +122,6 @@ int mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int for
           sqlite3_finalize(stmt);
           RETURN_ERROR(MPORT_ERR_SYSCALL_FAILED, strerror(errno));
         }
-        
         break;
       case PLIST_UNEXEC:
         if (mport_run_plist_exec(mport, data, cwd, file) != MPORT_OK) {
@@ -144,7 +144,7 @@ int mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int for
         break;
     }
   }
-  
+    
   sqlite3_finalize(stmt);
   
   if (run_pkg_deinstall(mport, pack, "POST-DEINSTALL") != MPORT_OK)
@@ -158,7 +158,7 @@ int mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int for
   
   if (mport_db_do(mport->db, "DELETE FROM packages WHERE pkg=%Q", pack->name) != MPORT_OK)
     RETURN_CURRENT_ERROR;
-    
+  
   return MPORT_OK;
     
 } 
