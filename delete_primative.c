@@ -169,7 +169,7 @@ static int run_pkg_deinstall(mportInstance *mport, mportPackageMeta *pack, const
   char file[FILENAME_MAX];
   int ret;
   
-  (void)snprintf(file, FILENAME_MAX, "%s/%s-%s/%s", MPORT_INST_INFRA_DIR, pack->name, pack->version, MPORT_INSTALL_FILE);    
+  (void)snprintf(file, FILENAME_MAX, "%s/%s-%s/%s", MPORT_INST_INFRA_DIR, pack->name, pack->version, MPORT_DEINSTALL_FILE);    
 
   if (mport_file_exists(file)) {
     if ((ret = mport_xsystem(mport, "PKG_PREFIX=%s %s %s %s", pack->prefix, MPORT_SH_BIN, file, mode)) != 0)
