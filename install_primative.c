@@ -83,7 +83,7 @@ int mport_install_primative(mportInstance *mport, const char *filename, const ch
     if (*file == '+') {
       (void)snprintf(filepath, FILENAME_MAX, "%s/%s", tmpdir, file);
       archive_entry_set_pathname(entry, filepath);
-      archive_read_extract(a, entry, ARCHIVE_EXTRACT_OWNER|ARCHIVE_EXTRACT_PERM|ARCHIVE_EXTRACT_TIME|ARCHIVE_EXTRACT_ACL|ARCHIVE_EXTRACT_FFLAGS);
+      archive_read_extract(a, entry, 0);
     } else {
       break;
     }
@@ -207,7 +207,8 @@ static int do_actual_install(
         } 
         (void)snprintf(file, FILENAME_MAX, "%s%s/%s", mport->root, cwd, data);
         archive_entry_set_pathname(entry, file);
-        if ((ret = archive_read_extract(a, entry, ARCHIVE_EXTRACT_OWNER|ARCHIVE_EXTRACT_PERM)) != ARCHIVE_OK) {
+
+        if ((ret = archive_read_extract(a, entry, ARCHIVE_EXTRACT_OWNER|ARCHIVE_EXTRACT_PERM|ARCHIVE_EXTRACT_TIME|ARCHIVE_EXTRACT_ACL|ARCHIVE_EXTRACT_FFLAGS)) != ARCHIVE_OK) {
           ret = SET_ERROR(MPORT_ERR_ARCHIVE, archive_error_string(a));
           goto ERROR;
         }
