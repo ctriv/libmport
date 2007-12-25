@@ -40,7 +40,9 @@ __MBSDID("$MidnightBSD: src/lib/libmport/mport.h,v 1.8 2007/12/05 17:02:15 ctriv
 #include <stdio.h>
 
 typedef void (*mport_msg_cb)(const char *);
-typedef void (*mport_progress_cb)(int, int, const char *);
+typedef void (*mport_progress_init_cb)(void);
+typedef void (*mport_progress_step_cb)(int, int, const char *);
+typedef void (*mport_progress_free_cb)(void);
 typedef int (*mport_confirm_cb)(const char *, const char *, const char *, int);
 
 /* Mport Instance (an installed copy of the mport system) */
@@ -48,8 +50,10 @@ typedef struct {
   sqlite3 *db;
   char *root;
   mport_msg_cb msg_cb;
-  mport_progress_cb progress_cb;
-  mport_confirm_cb  confirm_cb;
+  mport_progress_init_cb progress_init_cb;
+  mport_progress_step_cb progress_step_cb;
+  mport_progress_free_cb progress_free_cb;
+  mport_confirm_cb confirm_cb;
 } mportInstance;
 
 mportInstance * mport_new_instance(void);

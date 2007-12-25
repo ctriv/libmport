@@ -84,10 +84,21 @@ void mport_set_msg_cb(mportInstance *mport, mport_msg_cb cb)
   mport->msg_cb = cb;
 }
 
-void mport_set_progress_cb(mportInstance *mport, mport_progress_cb cb)
+void mport_set_progress_init_cb(mportInstance *mport, mport_progress_init_cb cb)
 {
-  mport->progress_cb = cb;
+  mport->progress_init_cb = cb;
 }
+
+void mport_set_progress_step_cb(mportInstance *mport, mport_progress_step_cb cb)
+{
+  mport->progress_init_cb = cb;
+}
+
+void mport_set_progress_free_cb(mportInstance *mport, mport_progress_free_cb cb)
+{
+  mport->progress_init_cb = cb;
+}
+
 
 void mport_set_confirm_cb(mportInstance *mport, mport_confirm_cb cb) 
 {
