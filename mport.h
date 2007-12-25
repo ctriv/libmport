@@ -61,11 +61,16 @@ int mport_init_instance(mportInstance *, const char *);
 int mport_free_instance(mportInstance *);
 
 void mport_set_msg_cb(mportInstance *, mport_msg_cb);
-void mport_set_progress_cb(mportInstance *, mport_progress_cb);
+void mport_set_progress_init_cb(mportInstance *, mport_progress_init_cb);
+void mport_set_progress_step_cb(mportInstance *, mport_progress_step_cb);
+void mport_set_progress_free_cb(mportInstance *, mport_progress_free_cb);
 void mport_set_confirm_cb(mportInstance *, mport_confirm_cb);
 
 void mport_default_msg_cb(const char *);
 int mport_default_confirm_cb(const char *, const char *, const char *, int);
+void mport_default_progress_init_cb(void);
+void mport_default_progress_step_cb(int, int, const char *);
+void mport_default_progress_free_cb(void);
 
 
 /* For now this is just the FreeBSD list, this will change soon. */

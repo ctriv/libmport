@@ -73,6 +73,15 @@ int mport_init_instance(mportInstance *mport, const char *root)
     RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(mport->db));
   }
   
+  
+  /* set the default UI callbacks */
+  mport->msg_cb           = &mport_default_msg_cb;
+  mport->progress_init_cb = &mport_default_progress_init_cb;
+  mport->progress_step_cb = &mport_default_progress_step_cb;
+  mport->progress_free_cb = &mport_default_progress_free_cb;
+  mport->confirm_cb       = &mport_default_confirm_cb;
+  
+
   /* create tables */
   return mport_generate_master_schema(mport->db);
 }
@@ -91,12 +100,12 @@ void mport_set_progress_init_cb(mportInstance *mport, mport_progress_init_cb cb)
 
 void mport_set_progress_step_cb(mportInstance *mport, mport_progress_step_cb cb)
 {
-  mport->progress_init_cb = cb;
+  mport->progress_step_cb = cb;
 }
 
 void mport_set_progress_free_cb(mportInstance *mport, mport_progress_free_cb cb)
 {
-  mport->progress_init_cb = cb;
+  mport->progress_free_cb = cb;
 }
 
 

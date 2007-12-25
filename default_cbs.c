@@ -28,14 +28,14 @@
 
 
 #include <stdio.h>
+#include <termios.h>
+#include <stdlib.h>
+#include <string.h>
 #include "mport.h"
-
-__MBSDID("$MidnightBSD: src/lib/libmport/inst_init.c,v 1.3 2007/12/05 17:02:15 ctriv Exp $");
-
 
 void mport_default_msg_cb(const char *msg) 
 {
-  (void)puts(msg);
+  (void)printf("%s\n", msg);
 }
 
 int mport_default_confirm_cb(const char *msg, const char *yes, const char *no, int def)
@@ -67,5 +67,63 @@ int mport_default_confirm_cb(const char *msg, const char *yes, const char *no, i
   
   /* Not reached */
   return MPORT_OK;
+}
+
+
+void mport_default_progress_init_cb()
+{
+  (void)puts("\n\n");
+}
+
+
+#define ESC "\x1b"
+#define BACK ESC "[%iD"
+#define UP   ESC "[A"
+#define DEL  ESC "[2K"
+
+void mport_default_progress_step_cb(int current, int total, const char *msg)
+{
+  struct termios term;
+  struct winsize win;
+  int width, bar_width, bar_on, bar_off;
+  double percent;
+  char *bar;
+   
+  if ((tcgetattr(STDIN_FILENO, &term) < 0) || (ioctl(STDIN_FILENO, TIOCGWINSZ, &win) < 0)) {
+    /* not a terminal or couldn't get terminal width*/
+    (void)printf("%s\n", msg);
+    return;
+  }
+
+  width = win.ws_col;
+  bar_width = width - 10;
+
+  if ((bar = (char *)malloc(sizeof(char) * width)) == NULL) {
+    /* no memory, we're outa here */
+    (void)printf("%s\n", msg);
+    return;
+  }
+
+  percent = (double)current / (double)total;
+  
+  bar_on = (int)(percent * (bar_width - 2));
+  bar_off = bar_width - 2 - bar_on;
+  
+  bar[0] = '[';
+  (void)memset(&(bar[1]), '=', bar_on);
+  (void)memset(&(bar[1 + bar_on]), ' ', bar_off);
+  bar[1 + bar_on + bar_off] = ']';
+  
+  (void)printf(BACK DEL UP DEL, width);
+  (void)printf("%s\n", msg);
+  (void)printf("%s %.3d/100%%", bar, (int)percent);
+  (void)fflush(stdout);
+  
+  free(bar);
+}
+
+void mport_default_progress_free_cb() 
+{
+  (void)puts("\n");
 }
 
