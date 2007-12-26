@@ -38,8 +38,6 @@
 #include <archive_entry.h>
 #include "mport.h"
 
-__MBSDID("$MidnightBSD: src/lib/libmport/archive.c,v 1.1 2007/12/01 06:21:37 ctriv Exp $");
-
 
 int mport_add_file_to_archive(struct archive *a, const char *filename, const char *path) 
 {
@@ -88,7 +86,7 @@ int mport_add_file_to_archive(struct archive *a, const char *filename, const cha
   if (archive_write_header(a, entry) != ARCHIVE_OK)
     RETURN_ERROR(MPORT_ERR_ARCHIVE, archive_error_string(a));
   
-  /* write the data to the archive is there is data to write */
+  /* write the data to the archive if there is data to write */
   if (archive_entry_size(entry) > 0) {
     len = read(fd, buff, sizeof(buff));
     while (len > 0) {

@@ -125,7 +125,7 @@ void mport_default_progress_step_cb(int current, int total, const char *msg)
 
 void mport_default_progress_free_cb() 
 {
-  (void)puts("\n\n");
+  (void)puts("\n");
   (void)fflush(stdout);
 }
 
