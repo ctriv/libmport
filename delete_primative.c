@@ -70,6 +70,7 @@ int mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int for
   int ret;
   mportPlistEntryType type;
   char *data, *checksum, *cwd;
+  struct stat st;
   char md5[33], file[FILENAME_MAX];
   
   if (force != 0) {
@@ -108,22 +109,35 @@ int mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int for
         break;
       case PLIST_FILE:
         (void)snprintf(file, FILENAME_MAX, "%s%s/%s", mport->root, cwd, data);
-        if (MD5File(file, md5) == NULL) {
-          sqlite3_finalize(stmt);
-          RETURN_ERRORX(MPORT_ERR_FILE_NOT_FOUND, "File not found: %s", file);
-        }
         
-        if (strcmp(md5, checksum) != 0) {
+        if (lstat(file, &st) != 0) {
           char *msg;
-          (void)asprintf(&msg, "Checksum mismatch: %s", file);
+          (void)asprintf(&msg, "Can't stat %s: %s", file, strerror(errno));
           (mport->msg_cb)(msg);
           free(msg);
+          break; /* next asset */
+        } 
+        
+        
+        if (S_ISREG(st.st_mode)) {
+          if (MD5File(file, md5) == NULL) {
+            sqlite3_finalize(stmt);
+            RETURN_ERRORX(MPORT_ERR_FILE_NOT_FOUND, "File not found: %s", file);
+          }
+          
+          if (strcmp(md5, checksum) != 0) {
+            char *msg;
+            (void)asprintf(&msg, "Checksum mismatch: %s", file);
+            (mport->msg_cb)(msg);
+            free(msg);
+          }
         }
         
         if (unlink(file) != 0) {
           sqlite3_finalize(stmt);
           RETURN_ERROR(MPORT_ERR_SYSCALL_FAILED, strerror(errno));
         }
+
         break;
       case PLIST_UNEXEC:
         if (mport_run_plist_exec(mport, data, cwd, file) != MPORT_OK) {
