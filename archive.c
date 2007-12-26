@@ -28,6 +28,7 @@
 
 
 #include <sys/stat.h>
+#include <limits.h>
 #include <string.h>
 #include <errno.h>
 #include <stdio.h>
@@ -45,25 +46,55 @@ int mport_add_file_to_archive(struct archive *a, const char *filename, const cha
   struct archive_entry *entry;
   struct stat st;
   int fd, len;
-  char buff[1024*8];
+  char buff[1024*64];
   
   if (lstat(filename, &st) != 0) {
     RETURN_ERROR(MPORT_ERR_SYSCALL_FAILED, strerror(errno));
   }
-  
+
   entry = archive_entry_new();
-  archive_entry_copy_stat(entry, &st);
   archive_entry_set_pathname(entry, path);
-  archive_write_header(a, entry);
+ 
   
-  if ((fd = open(filename, O_RDONLY)) == -1) {
-    RETURN_ERROR(MPORT_ERR_SYSCALL_FAILED, strerror(errno));
-  }
+  if (S_ISLNK(st.st_mode)) {
+    /* we have us a symlink */
+    int linklen;
+    char linkdata[PATH_MAX];
     
-  len = read(fd, buff, sizeof(buff));
-  while (len > 0) {
-    archive_write_data(a, buff, len);
+    linklen = readlink(filename, linkdata, PATH_MAX);
+    
+    if (linklen < 0) 
+      RETURN_ERROR(MPORT_ERR_SYSCALL_FAILED, strerror(errno));
+      
+    linkdata[linklen] = 0;
+    
+    archive_entry_set_symlink(entry, linkdata);
+  }
+  
+  
+  if (st.st_flags != 0) 
+    archive_entry_set_fflags(entry, st.st_flags, 0);
+    
+  archive_entry_copy_stat(entry, &st);
+  
+  /* non-regular files get archived with zero size */
+  if (!S_ISREG(st.st_mode)) 
+    archive_entry_set_size(entry, 0);
+  
+  /* make sure we can open the file before its header is put in the archive */
+  if ((fd = open(filename, O_RDONLY)) == -1)
+      RETURN_ERROR(MPORT_ERR_SYSCALL_FAILED, strerror(errno));
+    
+  if (archive_write_header(a, entry) != ARCHIVE_OK)
+    RETURN_ERROR(MPORT_ERR_ARCHIVE, archive_error_string(a));
+  
+  /* write the data to the archive is there is data to write */
+  if (archive_entry_size(entry) > 0) {
     len = read(fd, buff, sizeof(buff));
+    while (len > 0) {
+      archive_write_data(a, buff, len);
+      len = read(fd, buff, sizeof(buff));
+    }
   }
     
   archive_entry_free(entry);

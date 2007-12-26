@@ -88,7 +88,7 @@ int mport_install_primative(mportInstance *mport, const char *filename, const ch
       break;
     }
   }
-  
+
   /* Attach the stub db */
   if (mport_attach_stub_db(db, tmpdir) != MPORT_OK) 
     RETURN_CURRENT_ERROR;
@@ -157,15 +157,33 @@ static int do_actual_install(
       const char *tmpdir
     )
 {
-  int ret;
+  int ret, file_total;
+  int file_count = 0;
   mportPlistEntryType type;
   char *data, *cwd;
   char file[FILENAME_MAX];
-  sqlite3_stmt *assets;
+  sqlite3_stmt *assets, *count;
   sqlite3 *db;
   
-  
+ 
   db = mport->db;
+
+  /* get the file count for the progress meter */
+  if (mport_db_prepare(db, &count, "SELECT COUNT(*) FROM stub.assets WHERE type=%i", PLIST_FILE) != MPORT_OK)
+    RETURN_CURRENT_ERROR;
+
+  switch (sqlite3_step(count)) {
+    case SQLITE_ROW:
+      file_total = sqlite3_column_int(count, 0);
+      sqlite3_finalize(count);
+      break;
+    default:
+      SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
+      sqlite3_finalize(count);
+      RETURN_CURRENT_ERROR;
+  }
+  
+  (mport->progress_init_cb)();
   
   if (mport_db_do(db, "BEGIN TRANSACTION") != MPORT_OK) 
     goto ERROR;
@@ -212,6 +230,9 @@ static int do_actual_install(
           ret = SET_ERROR(MPORT_ERR_ARCHIVE, archive_error_string(a));
           goto ERROR;
         }
+        
+        (mport->progress_step_cb)(++file_count, file_total, file);
+        
         /* we only look for fatal, because EOF is only an error if we come
         back around. */
         if (archive_read_next_header(a, &entry) == ARCHIVE_FATAL) {
@@ -229,10 +250,13 @@ static int do_actual_install(
   
   if (mport_db_do(db, "COMMIT TRANSACTION") != MPORT_OK) 
     goto ERROR;
+    
+  (mport->progress_free_cb)();
   
   return MPORT_OK;
   
   ERROR:
+    (mport->progress_free_cb)();
     rollback();
     return ret;
 }           

@@ -72,7 +72,7 @@ int mport_default_confirm_cb(const char *msg, const char *yes, const char *no, i
 
 void mport_default_progress_init_cb()
 {
-  (void)puts("\n\n");
+  // (void)puts("\n");
 }
 
 
@@ -88,7 +88,7 @@ void mport_default_progress_step_cb(int current, int total, const char *msg)
   int width, bar_width, bar_on, bar_off;
   double percent;
   char *bar;
-   
+
   if ((tcgetattr(STDIN_FILENO, &term) < 0) || (ioctl(STDIN_FILENO, TIOCGWINSZ, &win) < 0)) {
     /* not a terminal or couldn't get terminal width*/
     (void)printf("%s\n", msg);
@@ -108,15 +108,16 @@ void mport_default_progress_step_cb(int current, int total, const char *msg)
   
   bar_on = (int)(percent * (bar_width - 2));
   bar_off = bar_width - 2 - bar_on;
-  
+
   bar[0] = '[';
   (void)memset(&(bar[1]), '=', bar_on);
   (void)memset(&(bar[1 + bar_on]), ' ', bar_off);
   bar[1 + bar_on + bar_off] = ']';
+  bar[2 + bar_on + bar_off] = 0;
   
-  (void)printf(BACK DEL UP DEL, width);
-  (void)printf("%s\n", msg);
-  (void)printf("%s %.3d/100%%", bar, (int)percent);
+  (void)printf(BACK DEL, width);
+//  (void)printf("%s\n", msg);
+  (void)printf("%s %3i/100%%", bar, (int)(percent * 100));
   (void)fflush(stdout);
   
   free(bar);
@@ -124,6 +125,7 @@ void mport_default_progress_step_cb(int current, int total, const char *msg)
 
 void mport_default_progress_free_cb() 
 {
-  (void)puts("\n");
+  (void)puts("\n\n");
+  (void)fflush(stdout);
 }
 

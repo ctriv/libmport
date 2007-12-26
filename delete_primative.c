@@ -114,8 +114,10 @@ int mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int for
         }
         
         if (strcmp(md5, checksum) != 0) {
-          sqlite3_finalize(stmt);
-          RETURN_ERRORX(MPORT_ERR_CHECKSUM_MISMATCH, "Checksum mismatch: %s", file);
+          char *msg;
+          (void)asprintf(&msg, "Checksum mismatch: %s", file);
+          (mport->msg_cb)(msg);
+          free(msg);
         }
         
         if (unlink(file) != 0) {
