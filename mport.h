@@ -56,9 +56,9 @@ typedef struct {
   mport_confirm_cb confirm_cb;
 } mportInstance;
 
-mportInstance * mport_new_instance(void);
-int mport_init_instance(mportInstance *, const char *);
-int mport_free_instance(mportInstance *);
+mportInstance * mport_instance_new(void);
+int mport_instance_init(mportInstance *, const char *);
+int mport_instance_free(mportInstance *);
 
 void mport_set_msg_cb(mportInstance *, mport_msg_cb);
 void mport_set_progress_init_cb(mportInstance *, mport_progress_init_cb);
@@ -79,10 +79,10 @@ typedef struct {
   char *filename;
 } mportArchive;
 
-mportArchive* mport_new_archive(void);
-int mport_init_archive(mportArchive *, const char *);
-int mport_finish_archive(mportArchive *);
-int mport_add_file_to_archive(mportArchive *, const char *, const char *);
+mportArchive* mport_archive_new(void);
+int mport_archive_init(mportArchive *, const char *);
+int mport_archive_finish(mportArchive *);
+int mport_archive_add_file(mportArchive *, const char *, const char *);
 
 
 /* For now this is just the FreeBSD list, this will change soon. */
@@ -107,9 +107,9 @@ STAILQ_HEAD(_Plist, _PlistEntry);
 typedef struct _Plist mportPlist;
 typedef struct _PlistEntry mportPlistEntry;
 
-mportPlist* mport_new_plist(void);
-void mport_free_plist(mportPlist *);
-int mport_parse_plist_file(FILE *, mportPlist *);
+mportPlist* mport_plist_new(void);
+void mport_plist_free(mportPlist *);
+int mport_plist_parsefile(FILE *, mportPlist *);
 
 /* Package Meta-data structure */
 
@@ -132,17 +132,16 @@ typedef struct {
   char *pkgmessage;
 } mportPackageMeta;  
 
-mportPackageMeta * mport_new_packagemeta(void);
-void mport_free_packagemeta(mportPackageMeta *);
-void mport_free_packagemeta_vec(mportPackageMeta **);
+mportPackageMeta * mport_packagemeta_new(void);
+void mport_packagemeta_free(mportPackageMeta *);
+void mport_packagemeta_vec_free(mportPackageMeta **);
+
 
 /* Package creation */
 int mport_create_primative(mportPlist *, mportPackageMeta *);
 
-
 /* Package installation */
 int mport_install_primative(mportInstance *, const char *, const char *);
-
 
 /* Package deletion */
 int mport_delete_name_primative(mportInstance *, const char *, int);
@@ -232,3 +231,4 @@ int mport_run_plist_exec(mportInstance *mport, const char *, const char *, const
 #define MPORT_CHROOT_BIN	"/usr/sbin/chroot"
 
 #endif /* ! defined _MPORT_H */
+

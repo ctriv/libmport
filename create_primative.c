@@ -325,14 +325,14 @@ static int archive_files(mportPlist *plist, mportPackageMeta *pack, const char *
   mportArchive *a;
   char filename[FILENAME_MAX];
   
-  a = mport_new_archive();
+  a = mport_archive_new();
   
-  if (mport_init_archive(a, pack->pkg_filename) != MPORT_OK)
+  if (mport_archive_init(a, pack->pkg_filename) != MPORT_OK)
     RETURN_CURRENT_ERROR;
 
   /* First step - +CONTENTS.db ALWAYS GOES FIRST!!! */        
   (void)snprintf(filename, FILENAME_MAX, "%s/%s", tmpdir, MPORT_STUB_DB_FILE);
-  if (mport_add_file_to_archive(a, filename, MPORT_STUB_DB_FILE)) 
+  if (mport_archive_add_file(a, filename, MPORT_STUB_DB_FILE)) 
     RETURN_CURRENT_ERROR;
     
   /* second step - the meta files */
@@ -343,7 +343,7 @@ static int archive_files(mportPlist *plist, mportPackageMeta *pack, const char *
   if (archive_plistfiles(a, pack, plist) != MPORT_OK)
     RETURN_CURRENT_ERROR;
     
-  mport_finish_archive(a);
+  mport_archive_finish(a);
   
   return MPORT_OK;    
 }
@@ -357,25 +357,25 @@ static int archive_metafiles(mportArchive *a, mportPackageMeta *pack)
 
   if (pack->mtree != NULL && mport_file_exists(pack->mtree)) {
     (void)snprintf(filename, FILENAME_MAX, "%s/%s", dir, MPORT_MTREE_FILE);
-    if (mport_add_file_to_archive(a, pack->mtree, filename) != MPORT_OK)
+    if (mport_archive_add_file(a, pack->mtree, filename) != MPORT_OK)
       RETURN_CURRENT_ERROR;
   }
   
   if (pack->pkginstall != NULL && mport_file_exists(pack->pkginstall)) {
     (void)snprintf(filename, FILENAME_MAX, "%s/%s", dir, MPORT_INSTALL_FILE);
-    if (mport_add_file_to_archive(a, pack->pkginstall, filename) != MPORT_OK)
+    if (mport_archive_add_file(a, pack->pkginstall, filename) != MPORT_OK)
       RETURN_CURRENT_ERROR;
   }
   
   if (pack->pkgdeinstall != NULL && mport_file_exists(pack->pkgdeinstall)) {
     (void)snprintf(filename, FILENAME_MAX, "%s/%s", dir, MPORT_DEINSTALL_FILE);
-    if (mport_add_file_to_archive(a, pack->pkgdeinstall, filename) != MPORT_OK)
+    if (mport_archive_add_file(a, pack->pkgdeinstall, filename) != MPORT_OK)
       RETURN_CURRENT_ERROR;
   }
   
   if (pack->pkgmessage != NULL && mport_file_exists(pack->pkgmessage)) {
     (void)snprintf(filename, FILENAME_MAX, "%s/%s", dir, MPORT_MESSAGE_FILE);
-    if (mport_add_file_to_archive(a, pack->pkgmessage, filename) != MPORT_OK)
+    if (mport_archive_add_file(a, pack->pkgmessage, filename) != MPORT_OK)
       RETURN_CURRENT_ERROR;
   }
   
@@ -398,7 +398,7 @@ static int archive_plistfiles(mportArchive *a, mportPackageMeta *pack, mportPlis
     
     (void)snprintf(filename, FILENAME_MAX, "%s/%s/%s", pack->sourcedir, cwd, e->data);
     
-    if (mport_add_file_to_archive(a, filename, e->data) != MPORT_OK)
+    if (mport_archive_add_file(a, filename, e->data) != MPORT_OK)
       RETURN_CURRENT_ERROR;
   }    
  

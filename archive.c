@@ -45,7 +45,7 @@
  * allocate a new archive struct.  Returns null if no
  * memory could be had 
  */
-mportArchive* mport_new_archive() 
+mportArchive* mport_archive_new() 
 {
   return (mportArchive *)malloc(sizeof(mportArchive));
 }
@@ -56,7 +56,7 @@ mportArchive* mport_new_archive()
  * set up an archive for adding files.  Sets the archive file to
  * filename.
  */
-int mport_init_archive(mportArchive *a, const char *filename)
+int mport_archive_init(mportArchive *a, const char *filename)
 {
   if ((a->filename = strdup(filename)) == NULL)
     RETURN_ERROR(MPORT_ERR_NO_MEM, "Couldn't dup filename");
@@ -78,7 +78,7 @@ int mport_init_archive(mportArchive *a, const char *filename)
  * Finish the archive file, and then free any memory used by the mportArchive struct.
  *
  */
-int mport_finish_archive(mportArchive *a)
+int mport_archive_finish(mportArchive *a)
 {
   int ret = MPORT_OK;
   
@@ -98,7 +98,7 @@ int mport_finish_archive(mportArchive *a)
  * Add a single file to the archive.  filename is the name of the file
  * in the system, while path is where the file should be put in the archive.
  */
-int mport_add_file_to_archive(mportArchive *a, const char *filename, const char *path) 
+int mport_archive_add_file(mportArchive *a, const char *filename, const char *path) 
 {
   struct archive_entry *entry;
   struct stat st;

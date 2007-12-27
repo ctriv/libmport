@@ -58,7 +58,7 @@ int mport_delete_name_primative(mportInstance *mport, const char *name, int forc
   
   ret = mport_delete_primative(mport, pkg, force);
 
-  mport_free_packagemeta(pkg);
+  mport_packagemeta_free(pkg);
   
   return ret;
 }

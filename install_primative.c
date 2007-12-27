@@ -122,7 +122,7 @@ int mport_install_primative(mportInstance *mport, const char *filename, const ch
       RETURN_CURRENT_ERROR;
   } 
   
-  mport_free_packagemeta_vec(packs);
+  mport_packagemeta_vec_free(packs);
   
   if (clean_up(mport, tmpdir) != MPORT_OK)
     RETURN_CURRENT_ERROR;

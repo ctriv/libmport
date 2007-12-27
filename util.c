@@ -37,17 +37,15 @@
 #include <libgen.h>
 #include "mport.h"
 
-__MBSDID("$MidnightBSD: src/lib/libmport/util.c,v 1.8 2007/12/01 06:21:37 ctriv Exp $");
-
 /* Package meta-data creation and destruction */
-mportPackageMeta* mport_new_packagemeta() 
+mportPackageMeta* mport_packagemeta_new() 
 {
   /* we use calloc so any pointers that aren't set are NULL.
      (calloc zero's out the memory region. */
   return (mportPackageMeta *)calloc(1, sizeof(mportPackageMeta));
 }
 
-void mport_free_packagemeta(mportPackageMeta *pack)
+void mport_packagemeta_free(mportPackageMeta *pack)
 {
   free(pack->pkg_filename);
   free(pack->comment);
@@ -72,11 +70,11 @@ void mport_free_packagemeta(mportPackageMeta *pack)
 }
 
 /* free a vector of mportPackageMeta pointers */
-void mport_free_packagemeta_vec(mportPackageMeta **vec)
+void mport_packagemeta_vec_free(mportPackageMeta **vec)
 {
   int i;
   for (i=0; *(vec + i) != NULL; i++) {
-    mport_free_packagemeta(*(vec + i));
+    mport_packagemeta_free(*(vec + i));
   }
   
   free(vec);

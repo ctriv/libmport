@@ -169,7 +169,7 @@ int mport_get_meta_from_stub(sqlite3 *db, mportPackageMeta ***ref)
   while (*vec != NULL) { 
     switch (sqlite3_step(stmt)) {
       case SQLITE_ROW:
-        *vec = mport_new_packagemeta();
+        *vec = mport_packagemeta_new();
         if (*vec == NULL)
           return MPORT_ERR_NO_MEM;
         if (populate_meta_from_stmt(*vec, db, stmt) != MPORT_OK)
@@ -210,7 +210,7 @@ int mport_get_meta_from_master(sqlite3 *db, mportPackageMeta **pack, const char 
   
   switch (sqlite3_step(stmt)) {
     case SQLITE_ROW:
-      *pack = mport_new_packagemeta();
+      *pack = mport_packagemeta_new();
       if (*pack == NULL)
         return MPORT_ERR_NO_MEM;
       

@@ -39,14 +39,14 @@ __MBSDID("$MidnightBSD: src/lib/libmport/inst_init.c,v 1.3 2007/12/05 17:02:15 c
 
 
 /* allocate mem for a mportInstance */
-mportInstance * mport_new_instance() 
+mportInstance * mport_instance_new() 
 {
  return (mportInstance *)malloc(sizeof(mportInstance)); 
 }
  
 
 /* set up the master database, and related instance infrastructure. */
-int mport_init_instance(mportInstance *mport, const char *root)
+int mport_instance_init(mportInstance *mport, const char *root)
 {
   char dir[FILENAME_MAX];
   
@@ -115,7 +115,7 @@ void mport_set_confirm_cb(mportInstance *mport, mport_confirm_cb cb)
 }
 
 
-int mport_free_instance(mportInstance *mport) 
+int mport_instance_free(mportInstance *mport) 
 {
   if (sqlite3_close(mport->db) != SQLITE_OK) {
     RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(mport->db));

@@ -34,8 +34,6 @@
 #include <string.h>
 #include "mport.h"
 
-__MBSDID("$MidnightBSD: src/lib/libmport/plist.c,v 1.3 2007/09/28 03:01:31 ctriv Exp $");
-
 #define CMND_MAGIC_COOKIE '@'
 #define STRING_EQ(r,l) (strcmp((r),(l)) == 0)
 
@@ -44,7 +42,7 @@ static mportPlistEntryType parse_command(const char*);
 /* Do everything needed to set up a new plist.  Always use this to create a plist,
  * don't go off and do it yourself.
  */
-mportPlist* mport_new_plist() 
+mportPlist* mport_plist_new() 
 {
   mportPlist *list = (mportPlist*)malloc(sizeof(mportPlist));
   STAILQ_INIT(list);
@@ -52,8 +50,8 @@ mportPlist* mport_new_plist()
 }
 
 
-/* free all the entryes in the list, and then the list itself. */
-void mport_free_plist(mportPlist *list) 
+/* free all the entries in the list, and then the list itself. */
+void mport_plist_free(mportPlist *list) 
 {
   mportPlistEntry *n;
 
@@ -72,7 +70,7 @@ void mport_free_plist(mportPlist *list)
  *
  * Returns NULL on failure.
  */
-int mport_parse_plist_file(FILE *fp, mportPlist *list)
+int mport_plist_parsefile(FILE *fp, mportPlist *list)
 {
   size_t length;
   char *line;
