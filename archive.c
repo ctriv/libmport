@@ -28,18 +28,77 @@
 
 
 #include <sys/stat.h>
-#include <limits.h>
+#include <stdlib.h>
 #include <string.h>
-#include <errno.h>
 #include <stdio.h>
-#include <unistd.h>
 #include <fcntl.h>
+#include <limits.h>
+#include <errno.h>
 #include <archive.h>
 #include <archive_entry.h>
 #include "mport.h"
 
 
-int mport_add_file_to_archive(struct archive *a, const char *filename, const char *path) 
+/* 
+ * mport_new_archive() 
+ *
+ * allocate a new archive struct.  Returns null if no
+ * memory could be had 
+ */
+mportArchive* mport_new_archive() 
+{
+  return (mportArchive *)malloc(sizeof(mportArchive));
+}
+
+/*
+ * mport_init_archive(filename)
+ * 
+ * set up an archive for adding files.  Sets the archive file to
+ * filename.
+ */
+int mport_init_archive(mportArchive *a, const char *filename)
+{
+  if ((a->filename = strdup(filename)) == NULL)
+    RETURN_ERROR(MPORT_ERR_NO_MEM, "Couldn't dup filename");
+   
+  a->archive = archive_write_new();
+  archive_write_set_compression_bzip2(a->archive);
+  archive_write_set_format_pax(a->archive);
+ 
+  if (archive_write_open_filename(a->archive, a->filename) != ARCHIVE_OK) {
+    RETURN_ERROR(MPORT_ERR_ARCHIVE, archive_error_string(a->archive)); 
+  }
+  
+  return MPORT_OK;
+}
+
+/* 
+ * mport_finish_archive(archive)
+ *
+ * Finish the archive file, and then free any memory used by the mportArchive struct.
+ *
+ */
+int mport_finish_archive(mportArchive *a)
+{
+  int ret = MPORT_OK;
+  
+  if (archive_write_finish(a->archive) != MPORT_OK)
+    ret = SET_ERROR(MPORT_ERR_ARCHIVE, archive_error_string(a->archive));
+      
+  free(a->filename);
+  free(a);
+  
+  return ret;
+}
+
+
+/*
+ * mport_add_file_to_archive(archive, filename, path)
+ *
+ * Add a single file to the archive.  filename is the name of the file
+ * in the system, while path is where the file should be put in the archive.
+ */
+int mport_add_file_to_archive(mportArchive *a, const char *filename, const char *path) 
 {
   struct archive_entry *entry;
   struct stat st;
@@ -83,14 +142,14 @@ int mport_add_file_to_archive(struct archive *a, const char *filename, const cha
   if ((fd = open(filename, O_RDONLY)) == -1)
       RETURN_ERROR(MPORT_ERR_SYSCALL_FAILED, strerror(errno));
     
-  if (archive_write_header(a, entry) != ARCHIVE_OK)
-    RETURN_ERROR(MPORT_ERR_ARCHIVE, archive_error_string(a));
+  if (archive_write_header(a->archive, entry) != ARCHIVE_OK)
+    RETURN_ERROR(MPORT_ERR_ARCHIVE, archive_error_string(a->archive));
   
   /* write the data to the archive if there is data to write */
   if (archive_entry_size(entry) > 0) {
     len = read(fd, buff, sizeof(buff));
     while (len > 0) {
-      archive_write_data(a, buff, len);
+      archive_write_data(a->archive, buff, len);
       len = read(fd, buff, sizeof(buff));
     }
   }

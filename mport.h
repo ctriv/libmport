@@ -34,7 +34,7 @@
 __MBSDID("$MidnightBSD: src/lib/libmport/mport.h,v 1.8 2007/12/05 17:02:15 ctriv Exp $");
 
 
-
+#include <archive.h>
 #include <sqlite3.h>
 #include <sys/queue.h>
 #include <stdio.h>
@@ -71,6 +71,18 @@ int mport_default_confirm_cb(const char *, const char *, const char *, int);
 void mport_default_progress_init_cb(void);
 void mport_default_progress_step_cb(int, int, const char *);
 void mport_default_progress_free_cb(void);
+
+
+/* Mport Archive (a file containing packages) */
+typedef struct {
+  struct archive *archive;
+  char *filename;
+} mportArchive;
+
+mportArchive* mport_new_archive(void);
+int mport_init_archive(mportArchive *, const char *);
+int mport_finish_archive(mportArchive *);
+int mport_add_file_to_archive(mportArchive *, const char *, const char *);
 
 
 /* For now this is just the FreeBSD list, this will change soon. */
@@ -199,9 +211,6 @@ void mport_parselist(char *, char ***);
 int mport_run_plist_exec(mportInstance *mport, const char *, const char *, const char *);
 
 
-/* archive helpers */
-#include <archive.h>
-int mport_add_file_to_archive(struct archive *, const char *, const char *);
 
 /* Infrastructure files */
 #define MPORT_STUB_DB_FILE 	"+CONTENTS.db"

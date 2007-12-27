@@ -50,8 +50,8 @@ static int insert_meta(sqlite3 *, mportPackageMeta *);
 static int insert_depends(sqlite3 *, mportPackageMeta *);
 static int insert_conflicts(sqlite3 *, mportPackageMeta *);
 static int archive_files(mportPlist *, mportPackageMeta *, const char *);
-static int archive_metafiles(struct archive *, mportPackageMeta *);
-static int archive_plistfiles(struct archive *, mportPackageMeta *, mportPlist *);
+static int archive_metafiles(mportArchive *, mportPackageMeta *);
+static int archive_plistfiles(mportArchive *, mportPackageMeta *, mportPlist *);
 static int clean_up(const char *);
 
 
@@ -322,17 +322,14 @@ static int insert_depends(sqlite3 *db, mportPackageMeta *pack)
 
 static int archive_files(mportPlist *plist, mportPackageMeta *pack, const char *tmpdir)
 {
-  struct archive *a;
+  mportArchive *a;
   char filename[FILENAME_MAX];
+  
+  a = mport_new_archive();
+  
+  if (mport_init_archive(a, pack->pkg_filename) != MPORT_OK)
+    RETURN_CURRENT_ERROR;
 
-  a = archive_write_new();
-  archive_write_set_compression_bzip2(a);
-  archive_write_set_format_pax(a);
-  
-  if (archive_write_open_filename(a, pack->pkg_filename) != ARCHIVE_OK) {
-    RETURN_ERROR(MPORT_ERR_ARCHIVE, archive_error_string(a)); 
-  }
-  
   /* First step - +CONTENTS.db ALWAYS GOES FIRST!!! */        
   (void)snprintf(filename, FILENAME_MAX, "%s/%s", tmpdir, MPORT_STUB_DB_FILE);
   if (mport_add_file_to_archive(a, filename, MPORT_STUB_DB_FILE)) 
@@ -346,13 +343,13 @@ static int archive_files(mportPlist *plist, mportPackageMeta *pack, const char *
   if (archive_plistfiles(a, pack, plist) != MPORT_OK)
     RETURN_CURRENT_ERROR;
     
-  archive_write_finish(a);
+  mport_finish_archive(a);
   
   return MPORT_OK;    
 }
 
 
-static int archive_metafiles(struct archive *a, mportPackageMeta *pack)
+static int archive_metafiles(mportArchive *a, mportPackageMeta *pack)
 {
   char filename[FILENAME_MAX], dir[FILENAME_MAX];
   
@@ -385,20 +382,15 @@ static int archive_metafiles(struct archive *a, mportPackageMeta *pack)
   return MPORT_OK;
 }
 
-static int archive_plistfiles(struct archive *a, mportPackageMeta *pack, mportPlist *plist)
+static int archive_plistfiles(mportArchive *a, mportPackageMeta *pack, mportPlist *plist)
 {
   mportPlistEntry *e;
   char filename[FILENAME_MAX];
   char *cwd = pack->prefix;
   
   STAILQ_FOREACH(e, plist, next) {
-    if (e->type == PLIST_CWD) {
-      if (e->data == NULL) {
-        cwd = pack->prefix;
-      } else {
-        cwd = e->data;
-      }
-    }
+    if (e->type == PLIST_CWD) 
+      cwd = e->data == NULL ? pack->prefix : e->data;
     
     if (e->type != PLIST_FILE) {
       continue;
