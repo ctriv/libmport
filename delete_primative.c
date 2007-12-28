@@ -42,6 +42,7 @@ __MBSDID("$MidnightBSD: src/lib/libmport/inst_init.c,v 1.1 2007/11/22 08:00:32 c
 
 
 static int run_pkg_deinstall(mportInstance *, mportPackageMeta *, const char *);
+static int delete_pkg_infra(mportInstance *, mportPackageMeta *);
 static int check_for_upwards_depends(mportInstance *, mportPackageMeta *);
 
 int mport_delete_name_primative(mportInstance *mport, const char *name, int force)
@@ -174,6 +175,9 @@ int mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int for
   
   if (mport_db_do(mport->db, "DELETE FROM packages WHERE pkg=%Q", pack->name) != MPORT_OK)
     RETURN_CURRENT_ERROR;
+    
+  if (delete_pkg_infra(mport, pack) != MPORT_OK)
+    RETURN_CURRENT_ERROR;
   
   return MPORT_OK;
     
@@ -194,6 +198,24 @@ static int run_pkg_deinstall(mportInstance *mport, mportPackageMeta *pack, const
   
   return MPORT_OK;
 }
+
+
+/* delete this package's infrastructure dir. */
+static int delete_pkg_infra(mportInstance *mport, mportPackageMeta *pack)
+{
+  char dir[FILENAME_MAX];
+  int ret;
+
+  (void)snprintf(dir, FILENAME_MAX, "%s%s/%s-%s", mport->root, MPORT_INST_INFRA_DIR, pack->name, pack->version);
+  
+  if (mport_file_exists(dir)) {
+    if ((ret = mport_rmtree(dir)) != MPORT_OK) 
+      RETURN_ERRORX(MPORT_ERR_SYSCALL_FAILED, "mport_rmtree(%s) failed.",  dir);
+  }
+  
+  return MPORT_OK;
+}
+
 
 
 static int check_for_upwards_depends(mportInstance *mport, mportPackageMeta *pack)

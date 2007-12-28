@@ -30,6 +30,7 @@
 
 #include "mport.h"
 #include <sys/cdefs.h>
+#include <sys/stat.h>
 #include <libgen.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -38,13 +39,12 @@
 #include <archive.h>
 #include <archive_entry.h>
 
-__MBSDID("$MidnightBSD: src/lib/libmport/install_pkg.c,v 1.4 2007/12/01 06:21:37 ctriv Exp $");
-
 static int do_pre_install(mportInstance *, mportPackageMeta *, const char *);
 static int do_actual_install(mportInstance *, struct archive *, struct archive_entry *, mportPackageMeta *, const char *);
 static int do_post_install(mportInstance *, mportPackageMeta *, const char *);
 static int run_pkg_install(mportInstance *, const char *, mportPackageMeta *, const char *);
 static int run_mtree(mportInstance *, const char *, mportPackageMeta *);
+static int display_pkg_msg(mportInstance *, mportPackageMeta *, const char *);
 static int clean_up(mportInstance *, const char *);
 static int rollback(void);
 
@@ -275,6 +275,9 @@ static int do_post_install(mportInstance *mport, mportPackageMeta *pack, const c
     if (mport_copy_file(from, to) != MPORT_OK)
       RETURN_CURRENT_ERROR;
   }
+
+  if (display_pkg_msg(mport, pack, tmpdir) != MPORT_OK)
+    RETURN_CURRENT_ERROR;
   
   return run_pkg_install(mport, tmpdir, pack, "POST-INSTALL");
 }
@@ -314,6 +317,40 @@ static int run_pkg_install(mportInstance *mport, const char *tmpdir, mportPackag
 }
  
 
+
+static int display_pkg_msg(mportInstance *mport, mportPackageMeta *pack, const char *tmpdir)
+{
+  char filename[FILENAME_MAX];
+  char *buf;
+  struct stat st;
+  FILE *file;
+  
+  (void)snprintf(filename, FILENAME_MAX, "%s/%s/%s-%s/%s", tmpdir, MPORT_STUB_INFRA_DIR, pack->name, pack->version, MPORT_MESSAGE_FILE);
+  
+  if (stat(filename, &st) == -1) 
+    /* if we couldn't stat the file, we assume there isn't a pkg-msg */
+    return MPORT_OK;
+    
+  if ((file = fopen(filename, "r")) == NULL) 
+    RETURN_ERRORX(MPORT_ERR_FILEIO, "Couldn't open %s: %s", filename, strerror(errno));
+  
+  if ((buf = (char *)malloc(st.st_size * sizeof(char))) == NULL)
+    return MPORT_ERR_NO_MEM;
+
+  
+  if (fread(buf, 1, st.st_size, file) != st.st_size) {
+    free(buf);
+    RETURN_ERRORX(MPORT_ERR_FILEIO, "Read error: %s", strerror(errno));
+  }
+  
+  (mport->msg_cb)(buf);
+  
+  free(buf);
+  
+  return MPORT_OK;
+}
+ 
+ 
 
 static int clean_up(mportInstance *mport, const char *tmpdir) 
 {
