@@ -44,7 +44,7 @@
 __MBSDID("$MidnightBSD: src/lib/libmport/create_pkg.c,v 1.8 2007/12/01 06:21:37 ctriv Exp $");
 
 
-static int create_package_db(sqlite3 **);
+static int create_stub_db(sqlite3 **);
 static int insert_plist(sqlite3 *, mportPlist *, mportPackageMeta *);
 static int insert_meta(sqlite3 *, mportPackageMeta *);
 static int insert_depends(sqlite3 *, mportPackageMeta *);
@@ -73,7 +73,7 @@ int mport_create_primative(mportPlist *plist, mportPackageMeta *pack)
     goto CLEANUP;
   }
 
-  if ((ret = create_package_db(&db)) != MPORT_OK)
+  if ((ret = create_stub_db(&db)) != MPORT_OK)
     goto CLEANUP;
     
   if ((ret = insert_plist(db, plist, pack)) != MPORT_OK)
@@ -96,7 +96,7 @@ int mport_create_primative(mportPlist *plist, mportPackageMeta *pack)
 }
 
 
-static int create_package_db(sqlite3 **db) 
+static int create_stub_db(sqlite3 **db) 
 {
   if (sqlite3_open(MPORT_STUB_DB_FILE, db) != SQLITE_OK) {
     sqlite3_close(*db);
