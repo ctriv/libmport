@@ -222,19 +222,16 @@ static int insert_meta(sqlite3 *db, mportPackageMeta *pack)
 static int insert_conflicts(sqlite3 *db, mportPackageMeta *pack) 
 {
   sqlite3_stmt *stmnt;
-  char sql[]  = "INSERT INTO conflicts (pkg, conflict_pkg, conflict_version) VALUES (?,?,?)";
   char **conflict  = pack->conflicts;
   char *version;
-  const char *rest = 0;
   
   /* we're done if there are no conflicts to record. */
   if (conflict == NULL) 
     return MPORT_OK;
-  
-  if (sqlite3_prepare_v2(db, sql, -1, &stmnt, &rest) != SQLITE_OK) {
-    RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
-  }
 
+  if (mport_db_prepare(db, &stmnt, "INSERT INTO conflicts (pkg, conflict_pkg, conflict_version) VALUES (?,?,?)") != MPORT_OK)
+    RETURN_CURRENT_ERROR;
+    
   /* we have a conflict like apache-1.4.  We want to do a m/(.*)-(.*)/ */
   while (*conflict != NULL) {
     version = rindex(*conflict, '-');
@@ -267,19 +264,16 @@ static int insert_conflicts(sqlite3 *db, mportPackageMeta *pack)
 static int insert_depends(sqlite3 *db, mportPackageMeta *pack) 
 {
   sqlite3_stmt *stmnt;
-  char sql[]  = "INSERT INTO depends (pkg, depend_pkgname, depend_pkgversion, depend_port) VALUES (?,?,?,?)";
   char **depend    = pack->depends;
   char *pkgversion;
   char *port;
-  const char *rest = 0;
   
   /* we're done if there are no deps to record. */
   if (depend == NULL) 
     return MPORT_OK;
-  
-  if (sqlite3_prepare_v2(db, sql, -1, &stmnt, &rest) != SQLITE_OK) {
-    RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
-  }
+
+  if (mport_db_prepare(db, &stmnt, "INSERT INTO depends (pkg, depend_pkgname, depend_pkgversion, depend_port) VALUES (?,?,?,?)") != MPORT_OK)
+    RETURN_CURRENT_ERROR;
   
   
   /* depends look like this.  break'em up into port, pkgversion and pkgname
