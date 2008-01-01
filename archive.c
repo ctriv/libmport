@@ -135,12 +135,13 @@ int mport_archive_add_file(mportArchive *a, const char *filename, const char *pa
   archive_entry_copy_stat(entry, &st);
   
   /* non-regular files get archived with zero size */
-  if (!S_ISREG(st.st_mode)) 
+  if (!S_ISREG(st.st_mode)) {
     archive_entry_set_size(entry, 0);
-  
+  }
   /* make sure we can open the file before its header is put in the archive */
-  if ((fd = open(filename, O_RDONLY)) == -1)
-      RETURN_ERROR(MPORT_ERR_SYSCALL_FAILED, strerror(errno));
+  else if ((fd = open(filename, O_RDONLY)) == -1) {
+   RETURN_ERROR(MPORT_ERR_SYSCALL_FAILED, strerror(errno));
+  }
     
   if (archive_write_header(a->archive, entry) != ARCHIVE_OK)
     RETURN_ERROR(MPORT_ERR_ARCHIVE, archive_error_string(a->archive));
@@ -155,7 +156,9 @@ int mport_archive_add_file(mportArchive *a, const char *filename, const char *pa
   }
     
   archive_entry_free(entry);
-  close(fd);
+  
+  if (fd != 0)
+    close(fd);
 
   return MPORT_OK;  
 }

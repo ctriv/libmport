@@ -29,6 +29,7 @@
 
 
 #include <sys/cdefs.h>
+#include <sys/stat.h>
 #include <sys/time.h>
 #include <sys/types.h>
 #include <errno.h>
@@ -115,6 +116,7 @@ static int insert_plist(sqlite3 *db, mportPlist *plist, mportPackageMeta *pack)
   char md5[33];
   char file[FILENAME_MAX];
   char cwd[FILENAME_MAX];
+  struct stat st;
 
   strlcpy(cwd, pack->sourcedir, FILENAME_MAX);
   strlcat(cwd, pack->prefix, FILENAME_MAX);
@@ -145,17 +147,25 @@ static int insert_plist(sqlite3 *db, mportPlist *plist, mportPackageMeta *pack)
     if (e->type == PLIST_FILE) {
       (void)snprintf(file, FILENAME_MAX, "%s/%s", cwd, e->data);
       
-      if (MD5File(file, md5) == NULL) 
-        RETURN_ERRORX(MPORT_ERR_FILE_NOT_FOUND, "File not found: %s", file);
+      if (lstat(file, &st) != 0) 
+        RETURN_ERRORX(MPORT_ERR_FILE_NOT_FOUND, "Couln't stat %s: %s", file, strerror(errno));
       
-      if (sqlite3_bind_text(stmnt, 4, md5, -1, SQLITE_STATIC) != SQLITE_OK) {
-        RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
+      if (S_ISREG(st.st_mode)) {
+
+        if (MD5File(file, md5) == NULL) 
+          RETURN_ERRORX(MPORT_ERR_FILE_NOT_FOUND, "File not found: %s", file);
+      
+        if (sqlite3_bind_text(stmnt, 4, md5, -1, SQLITE_STATIC) != SQLITE_OK) 
+          RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
+      } else {
+        sqlite3_bind_null(stmnt, 4);
       }
     } else {
       if (sqlite3_bind_null(stmnt, 4) != SQLITE_OK) {
         RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
       }
     }
+    
     if (sqlite3_step(stmnt) != SQLITE_DONE) {
       RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
     }
