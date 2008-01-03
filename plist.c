@@ -32,6 +32,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 #include "mport.h"
 
 #define CMND_MAGIC_COOKIE '@'
@@ -130,6 +131,13 @@ int mport_plist_parsefile(FILE *fp, mportPlist *list)
       entry->data = (char  *)malloc(strlen(line) + 1);
       if (entry->data == NULL) {
         return MPORT_ERR_NO_MEM;
+      }
+
+      char *pos = line + strlen(line) - 1;
+      
+      while (isspace(*pos)) {
+        *pos = 0;
+        pos--;
       }
       
       strlcpy(entry->data, line, (strlen(line) + 1));
