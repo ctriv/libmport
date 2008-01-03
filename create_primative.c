@@ -284,8 +284,7 @@ static int insert_depends(sqlite3 *db, mportPackageMeta *pack)
 
   if (mport_db_prepare(db, &stmnt, "INSERT INTO depends (pkg, depend_pkgname, depend_pkgversion, depend_port) VALUES (?,?,?,?)") != MPORT_OK)
     RETURN_CURRENT_ERROR;
-  
-  
+    
   /* depends look like this.  break'em up into port, pkgversion and pkgname
    * perl-5.8.8_1:lang/perl5.8
    */
@@ -293,11 +292,17 @@ static int insert_depends(sqlite3 *db, mportPackageMeta *pack)
     port = rindex(*depend, ':');
     *port = '\0';
     port++;
+
+    if (*port == 0)
+      RETURN_ERRORX(MPORT_ERR_MALFORMED_DEPEND, "Maformed depend: %s", *depend);
     
     pkgversion = rindex(*depend, '-');
     *pkgversion = '\0';
     pkgversion++;
     
+    if (*pkgversion == 0)
+      RETURN_ERRORX(MPORT_ERR_MALFORMED_DEPEND, "Maformed depend: %s", *depend);
+      
     if (sqlite3_bind_text(stmnt, 1, pack->name, -1, SQLITE_STATIC) != SQLITE_OK) {
       RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
     }

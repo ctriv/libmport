@@ -46,7 +46,15 @@ static char *mport_err_defaults[] = {
   "SQLite error.",
   "File not found."
   "System call failed.",
-  "libarchive error."
+  "libarchive error.",
+  "Package already installed.",
+  "Package conflicts with priviously installed package.",
+  "A depend is missing.",
+  "Malformed version.",
+  "Malformed depend.",
+  "No such package.",
+  "Checksum mismatch.",
+  "Packages depend on this package."
 };
   
 

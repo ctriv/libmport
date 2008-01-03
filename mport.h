@@ -188,9 +188,10 @@ int mport_set_errx(int , const char *, ...);
 #define MPORT_ERR_CONFLICTS		10
 #define MPORT_ERR_MISSING_DEPEND	11
 #define MPORT_ERR_MALFORMED_VERSION	12
-#define MPORT_ERR_NO_SUCH_PKG		13
-#define MPORT_ERR_CHECKSUM_MISMATCH	14
-#define MPORT_ERR_UPWARDS_DEPENDS	15
+#define MPORT_ERR_MALFORMED_DEPEND	13
+#define MPORT_ERR_NO_SUCH_PKG		14
+#define MPORT_ERR_CHECKSUM_MISMATCH	15
+#define MPORT_ERR_UPWARDS_DEPENDS	16
 
 #define RETURN_CURRENT_ERROR return mport_err_code()
 #define RETURN_ERROR(code, msg) return mport_set_errx((code), "Error at %s:(%d): %s", __FILE__, __LINE__, (msg))
