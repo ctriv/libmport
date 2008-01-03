@@ -283,7 +283,7 @@ int mport_run_plist_exec(mportInstance *mport, const char *fmt, const char *cwd,
           strlcpy(pos, name, max);
           l = strlen(name);
           pos += l;
-          pos -= l;
+          max -= l;
           break;
         default:
           *pos = *fmt;
@@ -300,7 +300,6 @@ int mport_run_plist_exec(mportInstance *mport, const char *fmt, const char *cwd,
   }
   
   *pos = '\0';
-  
   /* cmnd now hold the expaded command, now execute it*/
   return mport_xsystem(mport, cmnd);
 }          
