@@ -74,7 +74,7 @@ int mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int for
   struct stat st;
   char md5[33], file[FILENAME_MAX];
   
-  if (force != 0) {
+  if (force == 0) {
     if (check_for_upwards_depends(mport, pack) != MPORT_OK)
       RETURN_CURRENT_ERROR;
   }
