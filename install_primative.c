@@ -160,8 +160,8 @@ static int do_actual_install(
   int ret, file_total;
   int file_count = 0;
   mportPlistEntryType type;
-  char *data, *cwd;
-  char file[FILENAME_MAX];
+  char *data; 
+  char file[FILENAME_MAX], last[FILENAME_MAX], cwd[FILENAME_MAX];
   sqlite3_stmt *assets, *count;
   sqlite3 *db;
   
@@ -201,7 +201,7 @@ static int do_actual_install(
   if ((ret = mport_db_prepare(db, &assets, "SELECT type,data FROM stub.assets WHERE pkg=%Q", pack->name)) != MPORT_OK) 
     goto ERROR;
 
-  cwd = pack->prefix;
+  (void)strlcpy(cwd, pack->prefix, sizeof(cwd));
 
   while ((ret = sqlite3_step(assets)) == SQLITE_ROW) {
     type = (mportPlistEntryType)sqlite3_column_int(assets, 0);
@@ -209,10 +209,10 @@ static int do_actual_install(
       
     switch (type) {
       case PLIST_CWD:      
-        cwd = data == NULL ? pack->prefix : data;
+        (void)strlcpy(cwd, data == NULL ? pack->prefix : data, sizeof(cwd));
         break;
       case PLIST_EXEC:
-        if ((ret = mport_run_plist_exec(mport, data, cwd, file)) != MPORT_OK)
+        if ((ret = mport_run_plist_exec(mport, data, cwd, last)) != MPORT_OK)
           goto ERROR;
         break;
       case PLIST_FILE:
@@ -223,7 +223,10 @@ static int do_actual_install(
           ret = SET_ERROR(MPORT_ERR_INTERNAL, "Plist to arhive mismatch!");
           goto ERROR; 
         } 
+        
+        (void)strlcpy(last, data, sizeof(last));
         (void)snprintf(file, FILENAME_MAX, "%s%s/%s", mport->root, cwd, data);
+
         archive_entry_set_pathname(entry, file);
 
         if ((ret = archive_read_extract(a, entry, ARCHIVE_EXTRACT_OWNER|ARCHIVE_EXTRACT_PERM|ARCHIVE_EXTRACT_TIME|ARCHIVE_EXTRACT_ACL|ARCHIVE_EXTRACT_FFLAGS)) != ARCHIVE_OK) {

@@ -252,6 +252,7 @@ int mport_run_plist_exec(mportInstance *mport, const char *fmt, const char *cwd,
   size_t l;
   size_t max = FILENAME_MAX * 2;
   char cmnd[max];
+  char fqfile[FILENAME_MAX];
   char *pos = cmnd;
   char *name;
   
@@ -260,27 +261,28 @@ int mport_run_plist_exec(mportInstance *mport, const char *fmt, const char *cwd,
       fmt++;
       switch (*fmt) {
         case 'F':
-          strlcpy(pos, last_file, max);
+          (void)strlcpy(pos, last_file, max);
           l = strlen(last_file);
           pos += l;
           max -= l;
           break;
         case 'D':
-          strlcpy(pos, cwd, max);
+          (void)strlcpy(pos, cwd, max);
           l = strlen(cwd);
           pos += l;
           max -= l;
           break;
         case 'B':
-          name = dirname(last_file);
-          strlcpy(pos, name, max);
+          (void)snprintf(fqfile, sizeof(fqfile), "%s/%s", cwd, last_file);
+          name = dirname(fqfile);
+          (void)strlcpy(pos, name, max);
           l = strlen(name);
           pos += l;
           max -= l;
           break;
         case 'f':
           name = basename(last_file);
-          strlcpy(pos, name, max);
+          (void)strlcpy(pos, name, max);
           l = strlen(name);
           pos += l;
           max -= l;
@@ -300,6 +302,7 @@ int mport_run_plist_exec(mportInstance *mport, const char *fmt, const char *cwd,
   }
   
   *pos = '\0';
+  
   /* cmnd now hold the expaded command, now execute it*/
   return mport_xsystem(mport, cmnd);
 }          
