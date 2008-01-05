@@ -68,7 +68,7 @@ int mport_instance_init(mportInstance *mport, const char *root)
 
   /* dir is a file here, just trying to save memory */
   (void)snprintf(dir, FILENAME_MAX, "%s/%s", mport->root, MPORT_MASTER_DB_FILE);
-  if (sqlite3_open(MPORT_MASTER_DB_FILE, &(mport->db)) != 0) {
+  if (sqlite3_open(dir, &(mport->db)) != 0) {
     sqlite3_close(mport->db);
     RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(mport->db));
   }

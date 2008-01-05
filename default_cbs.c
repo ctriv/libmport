@@ -48,21 +48,18 @@ int mport_default_confirm_cb(const char *msg, const char *yes, const char *no, i
   while (1) {
     /* get answer, if just \n, then default. */
     ans = fgetln(stdin, &len);
-  
+
     if (len == 1) { 
       /* user just hit return */
-      (void)fprintf(stderr, "%s\n", def == 1 ? yes : no);
-      return def;
-    }
-    
-    (void)fprintf(stderr, "\n");
+      return def == 1 ? MPORT_OK : -1;
+    }  
     
     if (*ans == 'Y' || *ans == 'y') 
       return MPORT_OK;
     if (*ans == 'N' || *ans == 'n')
       return -1;
     
-    (void)fprintf(stderr, "Please enter yes or no.\n");   
+    (void)fprintf(stderr, "Please enter yes or no: ");   
   }
   
   /* Not reached */
@@ -72,7 +69,8 @@ int mport_default_confirm_cb(const char *msg, const char *yes, const char *no, i
 
 void mport_default_progress_init_cb()
 {
-  // (void)puts("\n");
+  /* do nothing */
+  return;
 }
 
 
@@ -125,7 +123,7 @@ void mport_default_progress_step_cb(int current, int total, const char *msg)
 
 void mport_default_progress_free_cb() 
 {
-  (void)puts("\n");
+  (void)printf("\n");
   (void)fflush(stdout);
 }
 

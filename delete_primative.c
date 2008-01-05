@@ -45,25 +45,6 @@ static int run_pkg_deinstall(mportInstance *, mportPackageMeta *, const char *);
 static int delete_pkg_infra(mportInstance *, mportPackageMeta *);
 static int check_for_upwards_depends(mportInstance *, mportPackageMeta *);
 
-int mport_delete_name_primative(mportInstance *mport, const char *name, int force)
-{
-  mportPackageMeta *pkg;
-  int ret;
-  
-  if (mport_get_meta_from_master(mport->db, &pkg, name) != MPORT_OK)
-    RETURN_CURRENT_ERROR;
-  
-  if (pkg == NULL) {
-    RETURN_ERRORX(MPORT_ERR_NO_SUCH_PKG, "Package %s is not installed.", name);
-  }
-  
-  ret = mport_delete_primative(mport, pkg, force);
-
-  mport_packagemeta_free(pkg);
-  
-  return ret;
-}
- 
 
 int mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int force) 
 {

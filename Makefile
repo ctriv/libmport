@@ -1,7 +1,7 @@
 # $MidnightBSD: src/lib/libmport/Makefile,v 1.5 2007/12/01 06:21:37 ctriv Exp $
 
 LIB=		mport
-SRCS=		archive.c plist.c create_primative.c db.c util.c error.c \
+SRCS=		bundle.c plist.c create_primative.c db.c util.c error.c \
 		install_primative.c instance.c version_cmp.c \
 		check_preconditions.c delete_primative.c default_cbs.c
 

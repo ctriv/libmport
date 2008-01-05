@@ -73,16 +73,16 @@ void mport_default_progress_step_cb(int, int, const char *);
 void mport_default_progress_free_cb(void);
 
 
-/* Mport Archive (a file containing packages) */
+/* Mport Bundle (a file containing packages) */
 typedef struct {
   struct archive *archive;
   char *filename;
-} mportArchive;
+} mportBundle;
 
-mportArchive* mport_archive_new(void);
-int mport_archive_init(mportArchive *, const char *);
-int mport_archive_finish(mportArchive *);
-int mport_archive_add_file(mportArchive *, const char *, const char *);
+mportBundle* mport_bundle_new(void);
+int mport_bundle_init(mportBundle *, const char *);
+int mport_bundle_finish(mportBundle *);
+int mport_bundle_add_file(mportBundle *, const char *, const char *);
 
 
 /* For now this is just the FreeBSD list, this will change soon. */
@@ -144,7 +144,6 @@ int mport_create_primative(mportPlist *, mportPackageMeta *);
 int mport_install_primative(mportInstance *, const char *, const char *);
 
 /* Package deletion */
-int mport_delete_name_primative(mportInstance *, const char *, int);
 int mport_delete_primative(mportInstance *, mportPackageMeta *, int);
 
 /* precondition checking */
@@ -159,7 +158,7 @@ int mport_generate_stub_schema(sqlite3 *);
 int mport_attach_stub_db(sqlite3 *, const char *);
 int mport_detach_stub_db(sqlite3 *);
 int mport_get_meta_from_stub(sqlite3 *, mportPackageMeta ***);
-int mport_get_meta_from_master(sqlite3 *, mportPackageMeta**, const char *);
+int mport_get_meta_from_master(mportInstance *, mportPackageMeta ***, const char *, ...);
 int mport_db_do(sqlite3 *, const char *, ...);
 int mport_db_prepare(sqlite3 *, sqlite3_stmt **, const char *, ...);
 
