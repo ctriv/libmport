@@ -337,7 +337,7 @@ static int display_pkg_msg(mportInstance *mport, mportPackageMeta *pack, const c
   if ((file = fopen(filename, "r")) == NULL) 
     RETURN_ERRORX(MPORT_ERR_FILEIO, "Couldn't open %s: %s", filename, strerror(errno));
   
-  if ((buf = (char *)malloc(st.st_size * sizeof(char))) == NULL)
+  if ((buf = (char *)malloc((st.st_size + 1) * sizeof(char))) == NULL)
     return MPORT_ERR_NO_MEM;
 
   
@@ -345,6 +345,8 @@ static int display_pkg_msg(mportInstance *mport, mportPackageMeta *pack, const c
     free(buf);
     RETURN_ERRORX(MPORT_ERR_FILEIO, "Read error: %s", strerror(errno));
   }
+  
+  buf[st.st_size] = 0;
   
   (mport->msg_cb)(buf);
   
