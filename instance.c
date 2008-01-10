@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/inst_init.c,v 1.3 2007/12/05 17:02:15 ctriv Exp $
+ * $MidnightBSD: src/lib/libmport/instance.c,v 1.1 2008/01/05 22:18:20 ctriv Exp $
  */
 
 
@@ -34,8 +34,6 @@
 #include <string.h>
 #include <stdlib.h>
 #include "mport.h"
-
-__MBSDID("$MidnightBSD: src/lib/libmport/inst_init.c,v 1.3 2007/12/05 17:02:15 ctriv Exp $");
 
 
 /* allocate mem for a mportInstance */

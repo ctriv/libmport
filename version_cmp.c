@@ -31,8 +31,6 @@
 #include <ctype.h>
 #include "mport.h"
 
-__MBSDID("$MidnightBSD: src/lib/libmport/version_cmp.c,v 1.2 2007/11/26 21:41:56 ctriv Exp $");
-
 struct version {
   char *version;
   int revision;

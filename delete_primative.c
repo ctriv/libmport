@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/inst_init.c,v 1.1 2007/11/22 08:00:32 ctriv Exp $
+ * $MidnightBSD: src/lib/libmport/delete_primative.c,v 1.1 2008/01/05 22:18:20 ctriv Exp $
  */
 
 
@@ -37,7 +37,6 @@
 #include <stdlib.h>
 #include "mport.h"
 
-__MBSDID("$MidnightBSD: src/lib/libmport/inst_init.c,v 1.1 2007/11/22 08:00:32 ctriv Exp $");
 
 
 

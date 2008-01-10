@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/plist.c,v 1.3 2007/09/28 03:01:31 ctriv Exp $
+ * $MidnightBSD: src/lib/libmport/plist.c,v 1.4 2008/01/05 22:18:20 ctriv Exp $
  */
 
 

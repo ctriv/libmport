@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/archive.c,v 1.1 2007/12/01 06:21:37 ctriv Exp $
+ * $MidnightBSD: src/lib/libmport/bundle.c,v 1.1 2008/01/05 22:18:20 ctriv Exp $
  */
 
 

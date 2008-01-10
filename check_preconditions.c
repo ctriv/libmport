@@ -23,12 +23,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/archive.c,v 1.1 2007/12/01 06:21:37 ctriv Exp $
+ * $MidnightBSD: src/lib/libmport/check_preconditions.c,v 1.1 2008/01/05 22:18:20 ctriv Exp $
  */
 
 #include "mport.h"
 
-__MBSDID("$MidnightBSD: src/lib/libmport/archive.c,v 1.1 2007/12/01 06:21:37 ctriv Exp $");
 
 
 static int check_if_installed(sqlite3 *, mportPackageMeta *);
@@ -171,12 +170,40 @@ static int check_depends(sqlite3 *db, mportPackageMeta *pack)
       switch (sqlite3_step(lookup)) {
         case SQLITE_ROW:
           inst_version = sqlite3_column_text(lookup, 0);
-          
-          if (mport_version_cmp(inst_version, depend_version) < 0) {
+          int ok;
+                    
+          if (depend_version == NULL)
+            /* no minimum version */
+            break;
+
+          /* break out the compare op at the front of the version string */          
+          if (depend_version[0] == '<') {
+            if (depend_version[1] == '=') {
+              depend_version += 2;
+              ok = (mport_version_cmp(inst_version, depend_version) <= 0);
+            } else {
+              depend_version++;
+              ok = (mport_version_cmp(inst_version, depend_version) < 0);
+            }
+          } else if (depend_version[0] == '>') {
+            if (depend_version[1] == '=') {
+              depend_version += 2;
+              ok = (mport_version_cmp(inst_version, depend_version) >= 0);
+            } else {
+              depend_version++;
+              ok = (mport_version_cmp(inst_version, depend_version) > 0);
+            }
+          } else {
+            sqlite3_finalize(lookup); sqlite3_finalize(stmt);
+            RETURN_ERRORX(MPORT_ERR_MALFORMED_DEPEND, "Maformed depend version for %s: %s", depend_pkg, depend_version);
+          }
+
+          if (!ok) {
             SET_ERRORX(MPORT_ERR_MISSING_DEPEND, "%s depends on %s version %s.  Version %s is installed.", pack->name, depend_pkg, depend_version, inst_version);
             sqlite3_finalize(lookup); sqlite3_finalize(stmt);
             RETURN_CURRENT_ERROR;
           }
+          
           break;
         case SQLITE_DONE:
           /* this depend isn't installed. */
