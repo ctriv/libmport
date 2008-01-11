@@ -85,15 +85,10 @@ int mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int for
     checksum = (char *)sqlite3_column_text(stmt, 2);
     
     switch (type) {
-      case PLIST_CWD:
-        cwd = data == NULL ? pack->prefix : data;
-        break;
       case PLIST_FILE:
-        (void)snprintf(file, FILENAME_MAX, "%s%s/%s", mport->root, cwd, data);
-        
-        if (lstat(file, &st) != 0) {
+        if (lstat(data, &st) != 0) {
           char *msg;
-          (void)asprintf(&msg, "Can't stat %s: %s", file, strerror(errno));
+          (void)asprintf(&msg, "Can't stat %s: %s", data, strerror(errno));
           (mport->msg_cb)(msg);
           free(msg);
           break; /* next asset */
@@ -101,22 +96,22 @@ int mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int for
         
         
         if (S_ISREG(st.st_mode)) {
-          if (MD5File(file, md5) == NULL) {
+          if (MD5File(data, md5) == NULL) {
             sqlite3_finalize(stmt);
-            RETURN_ERRORX(MPORT_ERR_FILE_NOT_FOUND, "File not found: %s", file);
+            RETURN_ERRORX(MPORT_ERR_FILE_NOT_FOUND, "File not found: %s", data);
           }
           
           if (strcmp(md5, checksum) != 0) {
             char *msg;
-            (void)asprintf(&msg, "Checksum mismatch: %s", file);
+            (void)asprintf(&msg, "Checksum mismatch: %s", data);
             (mport->msg_cb)(msg);
             free(msg);
           }
         }
         
-        if (unlink(file) != 0) {
+        if (unlink(data) != 0) {
           sqlite3_finalize(stmt);
-          RETURN_ERROR(MPORT_ERR_SYSCALL_FAILED, strerror(errno));
+          RETURN_ERRORX(MPORT_ERR_SYSCALL_FAILED, "Could not unlink %s: %s", data, strerror(errno));
         }
 
         break;
@@ -146,6 +141,9 @@ int mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int for
   
   if (run_pkg_deinstall(mport, pack, "POST-DEINSTALL") != MPORT_OK)
     RETURN_CURRENT_ERROR;
+  
+  if (mport_db_do(mport->db, "BEGIN TRANSACTION") != MPORT_OK)
+    RETURN_CURRENT_ERROR; 
     
   if (mport_db_do(mport->db, "DELETE FROM assets WHERE pkg=%Q", pack->name) != MPORT_OK)
     RETURN_CURRENT_ERROR;
@@ -159,8 +157,12 @@ int mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int for
   if (delete_pkg_infra(mport, pack) != MPORT_OK)
     RETURN_CURRENT_ERROR;
   
-  return MPORT_OK;
+  
+  /* clean up the master database file, we don't want to frag it */
+  if (mport_db_do(mport->db, "VACUUM") != MPORT_OK)
+    RETURN_CURRENT_ERROR;
     
+  return MPORT_OK;  
 } 
   
 

@@ -157,15 +157,14 @@ static int do_actual_install(
       const char *tmpdir
     )
 {
-  int ret, file_total;
+  int file_total, ret;
   int file_count = 0;
   mportPlistEntryType type;
-  char *data; 
-  char file[FILENAME_MAX], last[FILENAME_MAX], cwd[FILENAME_MAX];
-  sqlite3_stmt *assets, *count;
+  char *data, *checksum; 
+  char file[FILENAME_MAX], cwd[FILENAME_MAX];
+  sqlite3_stmt *assets, *count, *insert;
   sqlite3 *db;
   
- 
   db = mport->db;
 
   /* get the file count for the progress meter */
@@ -189,30 +188,42 @@ static int do_actual_install(
     goto ERROR;
 
   /* Insert the package meta row into the packages table (We use pack here because things might have been twiddled) */  
-  if ((ret = mport_db_do(db, "INSERT INTO packages (pkg, version, origin, prefix, lang, options) VALUES (%Q,%Q,%Q,%Q,%Q,%Q)", pack->name, pack->version, pack->origin, pack->prefix, pack->lang, pack->options)) != MPORT_OK)
+  if (mport_db_do(db, "INSERT INTO packages (pkg, version, origin, prefix, lang, options) VALUES (%Q,%Q,%Q,%Q,%Q,%Q)", pack->name, pack->version, pack->origin, pack->prefix, pack->lang, pack->options) != MPORT_OK)
     goto ERROR;
-  /* Insert the assets into the master table */
-  if ((ret = mport_db_do(db, "INSERT INTO assets (pkg, type, data, checksum) SELECT pkg,type,data,checksum FROM stub.assets WHERE pkg=%Q", pack->name)) != MPORT_OK)
+  /* Insert the assets into the master table (We do this one by one because we want to insert file 
+   * assets as absolute paths. */
+  if (mport_db_prepare(db, &insert, "INSERT INTO assets (pkg, type, data, checksum) values (%Q,?,?,?)", pack->name) != MPORT_OK)
     goto ERROR;  
   /* Insert the depends into the master table */
-  if ((ret = mport_db_do(db, "INSERT INTO depends (pkg, depend_pkgname, depend_pkgversion, depend_port) SELECT pkg,depend_pkgname,depend_pkgversion,depend_port FROM stub.depends WHERE pkg=%Q", pack->name)) != MPORT_OK) 
+  if (mport_db_do(db, "INSERT INTO depends (pkg, depend_pkgname, depend_pkgversion, depend_port) SELECT pkg,depend_pkgname,depend_pkgversion,depend_port FROM stub.depends WHERE pkg=%Q", pack->name) != MPORT_OK) 
     goto ERROR;
   
-  if ((ret = mport_db_prepare(db, &assets, "SELECT type,data FROM stub.assets WHERE pkg=%Q", pack->name)) != MPORT_OK) 
+  if (mport_db_prepare(db, &assets, "SELECT type,data,checksum FROM stub.assets WHERE pkg=%Q", pack->name) != MPORT_OK) 
     goto ERROR;
 
   (void)strlcpy(cwd, pack->prefix, sizeof(cwd));
 
-  while ((ret = sqlite3_step(assets)) == SQLITE_ROW) {
-    type = (mportPlistEntryType)sqlite3_column_int(assets, 0);
-    data = (char *)sqlite3_column_text(assets, 1);
-      
+  while (1) {
+    ret = sqlite3_step(assets);
+    
+    if (ret == SQLITE_DONE) 
+      break;
+    
+    if (ret != SQLITE_ROW) {
+      SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
+      goto ERROR;
+    }
+    
+    type     = (mportPlistEntryType)sqlite3_column_int(assets, 0);
+    data     = (char *)sqlite3_column_text(assets, 1);
+    checksum = (char *)sqlite3_column_text(assets, 2);  
+    
     switch (type) {
       case PLIST_CWD:      
         (void)strlcpy(cwd, data == NULL ? pack->prefix : data, sizeof(cwd));
         break;
       case PLIST_EXEC:
-        if ((ret = mport_run_plist_exec(mport, data, cwd, last)) != MPORT_OK)
+        if (mport_run_plist_exec(mport, data, cwd, file) != MPORT_OK)
           goto ERROR;
         break;
       case PLIST_FILE:
@@ -220,17 +231,16 @@ static int do_actual_install(
          * in the archive was read in the loop in mport_install_pkg.  we
          * use the current entry and then update it. */
         if (entry == NULL) {
-          ret = SET_ERROR(MPORT_ERR_INTERNAL, "Plist to arhive mismatch!");
+          SET_ERROR(MPORT_ERR_INTERNAL, "Plist to arhive mismatch!");
           goto ERROR; 
         } 
         
-        (void)strlcpy(last, data, sizeof(last));
         (void)snprintf(file, FILENAME_MAX, "%s%s/%s", mport->root, cwd, data);
 
         archive_entry_set_pathname(entry, file);
 
-        if ((ret = archive_read_extract(a, entry, ARCHIVE_EXTRACT_OWNER|ARCHIVE_EXTRACT_PERM|ARCHIVE_EXTRACT_TIME|ARCHIVE_EXTRACT_ACL|ARCHIVE_EXTRACT_FFLAGS)) != ARCHIVE_OK) {
-          ret = SET_ERROR(MPORT_ERR_ARCHIVE, archive_error_string(a));
+        if (archive_read_extract(a, entry, ARCHIVE_EXTRACT_OWNER|ARCHIVE_EXTRACT_PERM|ARCHIVE_EXTRACT_TIME|ARCHIVE_EXTRACT_ACL|ARCHIVE_EXTRACT_FFLAGS) != ARCHIVE_OK) {
+          SET_ERRORX(MPORT_ERR_ARCHIVE, "Error extracting %s: %s", file, archive_error_string(a));
           goto ERROR;
         }
         
@@ -239,7 +249,7 @@ static int do_actual_install(
         /* we only look for fatal, because EOF is only an error if we come
         back around. */
         if (archive_read_next_header(a, &entry) == ARCHIVE_FATAL) {
-          ret = SET_ERROR(MPORT_ERR_ARCHIVE, archive_error_string(a));
+          SET_ERROR(MPORT_ERR_ARCHIVE, archive_error_string(a));
           goto ERROR;
         }
         break;
@@ -247,9 +257,42 @@ static int do_actual_install(
         /* do nothing */
         break;
     }
+    
+    /* insert this assest into the master database */
+    if (sqlite3_bind_int(insert, 1, (int)type) != SQLITE_OK) {
+      SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));    
+      goto ERROR;
+    }
+    if (type == PLIST_FILE) {
+      if (sqlite3_bind_text(insert, 2, file, -1, SQLITE_STATIC) != SQLITE_OK) {
+        SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
+        goto ERROR;
+      }
+      if (sqlite3_bind_text(insert, 3, checksum, -1, SQLITE_STATIC) != SQLITE_OK) {
+        SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
+        goto ERROR;
+      }
+    } else {
+      if (sqlite3_bind_text(insert, 2, data, -1, SQLITE_STATIC) != SQLITE_OK) {
+        SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
+        goto ERROR;
+      }
+      if (sqlite3_bind_null(insert, 3) != SQLITE_OK) {
+        SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
+        goto ERROR;
+      }
+    }
+     
+    if (sqlite3_step(insert) != SQLITE_DONE) {
+      SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
+      goto ERROR;
+    }
+                        
+    sqlite3_reset(insert);
   }
 
-  sqlite3_finalize(assets);
+  sqlite3_finalize(assets); 
+  sqlite3_finalize(insert);
   
   if (mport_db_do(db, "COMMIT TRANSACTION") != MPORT_OK) 
     goto ERROR;
@@ -261,7 +304,7 @@ static int do_actual_install(
   ERROR:
     (mport->progress_free_cb)();
     rollback();
-    return ret;
+    RETURN_CURRENT_ERROR;
 }           
 
 static int do_post_install(mportInstance *mport, mportPackageMeta *pack, const char *tmpdir)

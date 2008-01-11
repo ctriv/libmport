@@ -240,7 +240,8 @@ void mport_parselist(char *opt, char ***list)
  * mport_run_plist_exec(fmt, cwd, last_file)
  * 
  * handles a @exec or a @unexec directive in a plist.  This function
- * does the substitions and then runs the command.
+ * does the substitions and then runs the command.  last_file is 
+ * absolute path.
  *
  * Substitutions:
  * %F	The last filename extracted (last_file argument)
@@ -253,7 +254,6 @@ int mport_run_plist_exec(mportInstance *mport, const char *fmt, const char *cwd,
   size_t l;
   size_t max = FILENAME_MAX * 2;
   char cmnd[max];
-  char fqfile[FILENAME_MAX];
   char *pos = cmnd;
   char *name;
   
@@ -262,7 +262,8 @@ int mport_run_plist_exec(mportInstance *mport, const char *fmt, const char *cwd,
       fmt++;
       switch (*fmt) {
         case 'F':
-          (void)strlcpy(pos, last_file, max);
+          /* last_file is absolute, so we skip the cwd at the begining */
+          (void)strlcpy(pos, last_file + strlen(cwd) + 1, max);
           l = strlen(last_file);
           pos += l;
           max -= l;
@@ -274,8 +275,7 @@ int mport_run_plist_exec(mportInstance *mport, const char *fmt, const char *cwd,
           max -= l;
           break;
         case 'B':
-          (void)snprintf(fqfile, sizeof(fqfile), "%s/%s", cwd, last_file);
-          name = dirname(fqfile);
+          name = dirname(last_file);
           (void)strlcpy(pos, name, max);
           l = strlen(name);
           pos += l;
