@@ -82,7 +82,7 @@ int mport_bundle_finish(mportBundle *bundle)
 {
   int ret = MPORT_OK;
   
-  if (archive_write_finish(bundle->archive) != MPORT_OK)
+  if (archive_write_finish(bundle->archive) != ARCHIVE_OK)
     ret = SET_ERROR(MPORT_ERR_ARCHIVE, archive_error_string(bundle->archive));
       
   free(bundle->filename);
