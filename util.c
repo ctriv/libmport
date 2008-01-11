@@ -109,7 +109,7 @@ int mport_mkdir(const char *dir)
 {
   if (mkdir(dir, S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH) != 0) {
     if (errno != EEXIST) 
-      RETURN_ERROR(MPORT_ERR_SYSCALL_FAILED, strerror(errno));
+      RETURN_ERRORX(MPORT_ERR_SYSCALL_FAILED, "Couldn't mkdir %s: %s", dir, strerror(errno));
   }
   
   return MPORT_OK;
@@ -129,12 +129,14 @@ int mport_rmdir(const char *dir, int ignore_nonempty)
     if (ignore_nonempty && (errno == ENOTEMPTY || errno == ENOENT)) {
       return MPORT_OK;
     } else {
-      RETURN_ERROR(MPORT_ERR_SYSCALL_FAILED, strerror(errno));
+      RETURN_ERRORX(MPORT_ERR_SYSCALL_FAILED, "Couldn't rmdir %s: %s", dir, strerror(errno));
     }
   } 
   
   return MPORT_OK;
 }
+
+
 /*
  * Quick test to see if a file exists.
  */
@@ -164,13 +166,13 @@ int mport_xsystem(mportInstance *mport, const char *fmt, ...)
   
   if (vasprintf(&cmnd, fmt, args) == -1) {
     /* XXX How will the caller know this is no mem, and not a failed exec? */
-    return MPORT_ERR_NO_MEM;
+    RETURN_ERROR(MPORT_ERR_NO_MEM, "Couldn't allocate xsystem cmnd string.");
   }
  
   if (mport != NULL && *(mport->root) != '\0') {
     char *chroot_cmd;
     if (asprintf(&chroot_cmd, "%s %s %s", MPORT_CHROOT_BIN, mport->root, cmnd) == -1)
-      return MPORT_ERR_NO_MEM;
+      RETURN_ERROR(MPORT_ERR_NO_MEM, "Couldn't allocate xsystem chroot string.");
   
     free(cmnd);
     cmnd = chroot_cmd;
