@@ -52,7 +52,7 @@ int mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int for
   mportPlistEntryType type;
   char *data, *checksum, *cwd;
   struct stat st;
-  char md5[33], file[FILENAME_MAX];
+  char md5[33];
   
   if (force == 0) {
     if (check_for_upwards_depends(mport, pack) != MPORT_OK)
@@ -83,12 +83,22 @@ int mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int for
     type     = (mportPlistEntryType)sqlite3_column_int(stmt, 0);
     data     = (char *)sqlite3_column_text(stmt, 1);
     checksum = (char *)sqlite3_column_text(stmt, 2);
+        char *file;
+
     
     switch (type) {
       case PLIST_FILE:
-        if (lstat(data, &st) != 0) {
+        
+        /* XXX TMP */
+        if (*data == '/') {
+          file = data;
+        } else {
+          asprintf(&file, "%s/%s", pack->prefix, data);
+        }
+ 
+        if (lstat(file, &st) != 0) {
           char *msg;
-          (void)asprintf(&msg, "Can't stat %s: %s", data, strerror(errno));
+          (void)asprintf(&msg, "Can't stat %s: %s", file, strerror(errno));
           (mport->msg_cb)(msg);
           free(msg);
           break; /* next asset */
@@ -96,22 +106,22 @@ int mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int for
         
         
         if (S_ISREG(st.st_mode)) {
-          if (MD5File(data, md5) == NULL) {
+          if (MD5File(file, md5) == NULL) {
             sqlite3_finalize(stmt);
-            RETURN_ERRORX(MPORT_ERR_FILE_NOT_FOUND, "File not found: %s", data);
+            RETURN_ERRORX(MPORT_ERR_FILE_NOT_FOUND, "File not found: %s", file);
           }
           
           if (strcmp(md5, checksum) != 0) {
             char *msg;
-            (void)asprintf(&msg, "Checksum mismatch: %s", data);
+            (void)asprintf(&msg, "Checksum mismatch: %s", file);
             (mport->msg_cb)(msg);
             free(msg);
           }
         }
         
-        if (unlink(data) != 0) {
+        if (unlink(file) != 0) {
           sqlite3_finalize(stmt);
-          RETURN_ERRORX(MPORT_ERR_SYSCALL_FAILED, "Could not unlink %s: %s", data, strerror(errno));
+          RETURN_ERRORX(MPORT_ERR_SYSCALL_FAILED, "Could not unlink %s: %s", file, strerror(errno));
         }
 
         break;
@@ -156,6 +166,9 @@ int mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int for
     
   if (delete_pkg_infra(mport, pack) != MPORT_OK)
     RETURN_CURRENT_ERROR;
+
+  if (mport_db_do(mport->db, "COMMIT TRANSACTION") != MPORT_OK)
+    RETURN_CURRENT_ERROR; 
   
   
   /* clean up the master database file, we don't want to frag it */

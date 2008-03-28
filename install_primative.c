@@ -264,7 +264,8 @@ static int do_actual_install(
       goto ERROR;
     }
     if (type == PLIST_FILE) {
-      if (sqlite3_bind_text(insert, 2, file, -1, SQLITE_STATIC) != SQLITE_OK) {
+      /* don't put the root in the database! */
+      if (sqlite3_bind_text(insert, 2, file + strlen(mport->root), -1, SQLITE_STATIC) != SQLITE_OK) {
         SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
         goto ERROR;
       }

@@ -265,7 +265,7 @@ int mport_run_plist_exec(mportInstance *mport, const char *fmt, const char *cwd,
       switch (*fmt) {
         case 'F':
           /* last_file is absolute, so we skip the cwd at the begining */
-          (void)strlcpy(pos, last_file + strlen(cwd) + 1, max);
+          (void)strlcpy(pos, last_file + strlen(cwd), max);
           l = strlen(last_file);
           pos += l;
           max -= l;
