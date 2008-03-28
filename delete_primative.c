@@ -187,7 +187,10 @@ static int run_pkg_deinstall(mportInstance *mport, mportPackageMeta *pack, const
   (void)snprintf(file, FILENAME_MAX, "%s/%s-%s/%s", MPORT_INST_INFRA_DIR, pack->name, pack->version, MPORT_DEINSTALL_FILE);    
 
   if (mport_file_exists(file)) {
-    if ((ret = mport_xsystem(mport, "PKG_PREFIX=%s %s %s %s %s", pack->prefix, MPORT_SH_BIN, file, pack->name, mode)) != 0)
+    if (chmod(file, 755) != 0)
+      RETURN_ERRORX(MPORT_ERR_SYSCALL_FAILED, "chmod(%s, 755): %s", file, strerror(errno));
+      
+    if ((ret = mport_xsystem(mport, "PKG_PREFIX=%s %s %s %s", pack->prefix, file, pack->name, mode)) != 0)
       RETURN_ERRORX(MPORT_ERR_SYSCALL_FAILED, "%s %s returned non-zero: %i", MPORT_INSTALL_FILE, mode, ret);
   }
   
