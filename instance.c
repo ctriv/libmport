@@ -72,12 +72,18 @@ int mport_instance_init(mportInstance *mport, const char *root)
   }
   
   
+  if (sqlite3_create_function(mport->db, "mport_version_cmp", 2, SQLITE_ANY, NULL, &mport_version_cmp_sqlite, NULL, NULL) != SQLITE_OK) {
+    sqlite3_close(mport->db);
+    RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(mport->db));
+  }
+  
   /* set the default UI callbacks */
   mport->msg_cb           = &mport_default_msg_cb;
   mport->progress_init_cb = &mport_default_progress_init_cb;
   mport->progress_step_cb = &mport_default_progress_step_cb;
   mport->progress_free_cb = &mport_default_progress_free_cb;
   mport->confirm_cb       = &mport_default_confirm_cb;
+  
   
 
   /* create tables */

@@ -165,7 +165,7 @@ int mport_db_prepare(sqlite3 *, sqlite3_stmt **, const char *, ...);
 
 /* version comparing */
 int mport_version_cmp(const char *, const char *);
-
+void mport_version_cmp_sqlite(sqlite3_context *, int, sqlite3_value **);
 
 /* Errors */
 int mport_err_code(void);
