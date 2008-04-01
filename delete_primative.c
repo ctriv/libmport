@@ -83,18 +83,18 @@ int mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int for
     type     = (mportPlistEntryType)sqlite3_column_int(stmt, 0);
     data     = (char *)sqlite3_column_text(stmt, 1);
     checksum = (char *)sqlite3_column_text(stmt, 2);
-        char *file;
+    char *file;
+    /* XXX TMP */
+    if (*data == '/') {
+      file = data;
+    } else {
+      asprintf(&file, "%s/%s", pack->prefix, data);
+    }
 
     
     switch (type) {
       case PLIST_FILE:
         
-        /* XXX TMP */
-        if (*data == '/') {
-          file = data;
-        } else {
-          asprintf(&file, "%s/%s", pack->prefix, data);
-        }
  
         if (lstat(file, &st) != 0) {
           char *msg;
@@ -134,7 +134,6 @@ int mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int for
       case PLIST_DIRRM:
       case PLIST_DIRRMTRY:
         (void)snprintf(file, FILENAME_MAX, "%s%s/%s", mport->root, cwd, data);
-        
         if (mport_rmdir(file, type == PLIST_DIRRMTRY ? 1 : 0) != MPORT_OK) {
           sqlite3_finalize(stmt);
           RETURN_CURRENT_ERROR;
