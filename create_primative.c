@@ -71,16 +71,16 @@ int mport_create_primative(mportPlist *plist, mportPackageMeta *pack)
     ret = SET_ERROR(MPORT_ERR_FILEIO, strerror(errno));
     goto CLEANUP;
   }
-
+  
   if ((ret = create_stub_db(&db)) != MPORT_OK)
     goto CLEANUP;
-    
+
   if ((ret = insert_plist(db, plist, pack)) != MPORT_OK)
     goto CLEANUP;
-  
+
   if ((ret = insert_meta(db, pack)) != MPORT_OK)
     goto CLEANUP;
-    
+  
   if (sqlite3_close(db) != SQLITE_OK) {
     ret = SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
     goto CLEANUP;
@@ -220,9 +220,10 @@ static int insert_meta(sqlite3 *db, mportPackageMeta *pack)
   /* insert depends and conflicts */
   if ((ret = insert_depends(db, pack)) != MPORT_OK)
     return ret;  
+    
   if ((ret = insert_conflicts(db, pack)) != MPORT_OK)
     return ret;
-    
+  
   return MPORT_OK;
 }
 
@@ -243,8 +244,6 @@ static int insert_conflicts(sqlite3 *db, mportPackageMeta *pack)
   /* we have a conflict like apache-1.4.  We want to do a m/(.*)-(.*)/ */
   while (*conflict != NULL) {
     version = rindex(*conflict, '-');
-    *version = '\0';
-    version++;
     
     if (sqlite3_bind_text(stmnt, 1, pack->name, -1, SQLITE_STATIC) != SQLITE_OK) {
       RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
@@ -252,8 +251,16 @@ static int insert_conflicts(sqlite3 *db, mportPackageMeta *pack)
     if (sqlite3_bind_text(stmnt, 2, *conflict, -1, SQLITE_STATIC) != SQLITE_OK) {
       RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
     }
-    if (sqlite3_bind_text(stmnt, 3, version, -1, SQLITE_STATIC) != SQLITE_OK) {
-      RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
+    if (version != NULL) {
+      *version = '\0';
+      version++;
+      if (sqlite3_bind_text(stmnt, 3, version, -1, SQLITE_STATIC) != SQLITE_OK) {
+        RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
+      }
+    } else {
+      if (sqlite3_bind_text(stmnt, 3, "*", -1, SQLITE_STATIC) != SQLITE_OK) {
+        RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
+      }
     }
     if (sqlite3_step(stmnt) != SQLITE_DONE) {
       RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
