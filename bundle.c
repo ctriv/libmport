@@ -116,14 +116,14 @@ int mport_bundle_add_file(mportBundle *bundle, const char *filename, const char 
   if (S_ISLNK(st.st_mode)) {
     /* we have us a symlink */
     int linklen;
-    char linkdata[PATH_MAX];
+    char linkdata[PATH_MAX + 1];
     
     linklen = readlink(filename, linkdata, PATH_MAX);
     
     if (linklen < 0) 
       RETURN_ERROR(MPORT_ERR_SYSCALL_FAILED, strerror(errno));
       
-    linkdata[linklen] = 0;
+    linkdata[linklen] = '\0';
     
     archive_entry_set_symlink(entry, linkdata);
   }
