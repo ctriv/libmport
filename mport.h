@@ -77,6 +77,7 @@ void mport_default_progress_free_cb(void);
 typedef struct {
   struct archive *archive;
   char *filename;
+  struct links_table *links;
 } mportBundle;
 
 mportBundle* mport_bundle_new(void);
