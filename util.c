@@ -81,14 +81,29 @@ void mport_packagemeta_vec_free(mportPackageMeta **vec)
 }
 
 /* a wrapper around chdir, to work with our error system */
-int mport_chdir(const char *dir)
+int mport_chdir(mportInstance *mport, const char *dir)
 {
-  if (chdir(dir) != 0)
-    RETURN_ERRORX(MPORT_ERR_SYSCALL_FAILED, "Couldn't chdir to %s: %s", dir, strerror(errno));
+  if (mport != NULL) {
+    char *finaldir;
+  
+    asprintf(&finaldir, "%s%s", mport->root, dir);
+  
+    if (finaldir == NULL)
+      RETURN_ERROR(MPORT_ERR_NO_MEM, "Couldn't building root'ed dir");
     
+    if (chdir(finaldir) != 0) {
+      free(finaldir);
+      RETURN_ERRORX(MPORT_ERR_SYSCALL_FAILED, "Couldn't chdir to %s: %s", finaldir, strerror(errno));
+    }
+  
+    free(finaldir);
+  } else {
+    if (chdir(dir) != 0) 
+      RETURN_ERRORX(MPORT_ERR_SYSCALL_FAILED, "Couldn't chdir to %s: %s", dir, strerror(errno));
+  }
+  
   return MPORT_OK;
-}
-    
+}    
 
 
 /* deletes the entire directory tree at name.

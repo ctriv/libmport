@@ -208,7 +208,7 @@ int mport_copy_file(const char *, const char *);
 int mport_rmtree(const char *);
 int mport_mkdir(const char *);
 int mport_rmdir(const char *, int);
-int mport_chdir(const char *);
+int mport_chdir(mportInstance *, const char *);
 int mport_file_exists(const char *);
 int mport_xsystem(mportInstance *mport, const char *, ...);
 void mport_parselist(char *, char ***);

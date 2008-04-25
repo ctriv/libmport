@@ -204,9 +204,9 @@ static int do_actual_install(
   if (mport_db_prepare(db, &assets, "SELECT type,data,checksum FROM stub.assets WHERE pkg=%Q", pack->name) != MPORT_OK) 
     goto ERROR;
 
-  (void)snprintf(cwd, sizeof(cwd), "%s%s", mport->root, pack->prefix);
+  (void)strlcpy(cwd, pack->prefix, sizeof(cwd));
   
-  if (mport_chdir(cwd) != MPORT_OK)
+  if (mport_chdir(mport, cwd) != MPORT_OK)
     goto ERROR;
 
   while (1) {
@@ -226,8 +226,8 @@ static int do_actual_install(
     
     switch (type) {
       case PLIST_CWD:      
-        (void)snprintf(cwd, sizeof(cwd), "%s%s", mport->root, data == NULL ? pack->prefix : data);
-        if (mport_chdir(cwd) != MPORT_OK)
+        (void)strlcpy(cwd, data == NULL ? pack->prefix : data, sizeof(cwd));
+        if (mport_chdir(mport, cwd) != MPORT_OK)
           goto ERROR;
           
         break;
@@ -315,7 +315,7 @@ static int do_actual_install(
     goto ERROR;
     
   (mport->progress_free_cb)();
-  (void)mport_chdir(orig_cwd);
+  (void)mport_chdir(NULL, orig_cwd);
   free(orig_cwd);
   return MPORT_OK;
   
