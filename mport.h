@@ -66,11 +66,14 @@ void mport_set_progress_step_cb(mportInstance *, mport_progress_step_cb);
 void mport_set_progress_free_cb(mportInstance *, mport_progress_free_cb);
 void mport_set_confirm_cb(mportInstance *, mport_confirm_cb);
 
+void mport_call_msg_cb(mportInstance *, const char *, ...);
+
 void mport_default_msg_cb(const char *);
 int mport_default_confirm_cb(const char *, const char *, const char *, int);
 void mport_default_progress_init_cb(void);
 void mport_default_progress_step_cb(int, int, const char *);
 void mport_default_progress_free_cb(void);
+
 
 
 /* Mport Bundle (a file containing packages) */
@@ -170,7 +173,7 @@ void mport_version_cmp_sqlite(sqlite3_context *, int, sqlite3_value **);
 
 /* Errors */
 int mport_err_code(void);
-char * mport_err_string(void);
+const char * mport_err_string(void);
 
 int mport_set_err(int, const char *);
 int mport_set_errx(int , const char *, ...);
@@ -205,6 +208,7 @@ int mport_copy_file(const char *, const char *);
 int mport_rmtree(const char *);
 int mport_mkdir(const char *);
 int mport_rmdir(const char *, int);
+int mport_chdir(const char *);
 int mport_file_exists(const char *);
 int mport_xsystem(mportInstance *mport, const char *, ...);
 void mport_parselist(char *, char ***);

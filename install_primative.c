@@ -160,12 +160,15 @@ static int do_actual_install(
   int file_total, ret;
   int file_count = 0;
   mportPlistEntryType type;
-  char *data, *checksum; 
-  char file[FILENAME_MAX], cwd[FILENAME_MAX];
+  char *data, *checksum, *orig_cwd; 
+  char file[FILENAME_MAX], cwd[FILENAME_MAX], dir[FILENAME_MAX];
   sqlite3_stmt *assets, *count, *insert;
   sqlite3 *db;
   
   db = mport->db;
+
+  /* sadly, we can't just use abs pathnames, because it will break hardlinks */
+  orig_cwd = getcwd(NULL, 0);
 
   /* get the file count for the progress meter */
   if (mport_db_prepare(db, &count, "SELECT COUNT(*) FROM stub.assets WHERE type=%i", PLIST_FILE) != MPORT_OK)
@@ -201,7 +204,10 @@ static int do_actual_install(
   if (mport_db_prepare(db, &assets, "SELECT type,data,checksum FROM stub.assets WHERE pkg=%Q", pack->name) != MPORT_OK) 
     goto ERROR;
 
-  (void)strlcpy(cwd, pack->prefix, sizeof(cwd));
+  (void)snprintf(cwd, sizeof(cwd), "%s%s", mport->root, pack->prefix);
+  
+  if (mport_chdir(cwd) != MPORT_OK)
+    goto ERROR;
 
   while (1) {
     ret = sqlite3_step(assets);
@@ -220,7 +226,10 @@ static int do_actual_install(
     
     switch (type) {
       case PLIST_CWD:      
-        (void)strlcpy(cwd, data == NULL ? pack->prefix : data, sizeof(cwd));
+        (void)snprintf(cwd, sizeof(cwd), "%s%s", mport->root, data == NULL ? pack->prefix : data);
+        if (mport_chdir(cwd) != MPORT_OK)
+          goto ERROR;
+          
         break;
       case PLIST_EXEC:
         if (mport_run_plist_exec(mport, data, cwd, file) != MPORT_OK)
@@ -240,7 +249,7 @@ static int do_actual_install(
         archive_entry_set_pathname(entry, file);
 
         if (archive_read_extract(a, entry, ARCHIVE_EXTRACT_OWNER|ARCHIVE_EXTRACT_PERM|ARCHIVE_EXTRACT_TIME|ARCHIVE_EXTRACT_ACL|ARCHIVE_EXTRACT_FFLAGS) != ARCHIVE_OK) {
-          SET_ERRORX(MPORT_ERR_ARCHIVE, "Error extracting %s: %s", file, archive_error_string(a));
+          SET_ERRORX(MPORT_ERR_ARCHIVE, "Error extracting %s", archive_error_string(a));
           goto ERROR;
         }
         
@@ -273,11 +282,18 @@ static int do_actual_install(
         SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
         goto ERROR;
       }
-    } else {
+    } else if (type == PLIST_DIRRM || type == PLIST_DIRRMTRY) {
+      (void)snprintf(dir, FILENAME_MAX, "%s/%s", cwd, data);
+      if (sqlite3_bind_text(insert, 2, dir, -1, SQLITE_STATIC) != SQLITE_OK) {
+        SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
+        goto ERROR;
+      }
+    } else {  
       if (sqlite3_bind_text(insert, 2, data, -1, SQLITE_STATIC) != SQLITE_OK) {
         SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
         goto ERROR;
       }
+      
       if (sqlite3_bind_null(insert, 3) != SQLITE_OK) {
         SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
         goto ERROR;
@@ -299,11 +315,13 @@ static int do_actual_install(
     goto ERROR;
     
   (mport->progress_free_cb)();
-  
+  (void)mport_chdir(orig_cwd);
+  free(orig_cwd);
   return MPORT_OK;
   
   ERROR:
     (mport->progress_free_cb)();
+    free(orig_cwd);
     rollback();
     RETURN_CURRENT_ERROR;
 }           

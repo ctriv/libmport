@@ -62,19 +62,9 @@ int mport_err_code()
   return err;
 }
 
-char * mport_err_string()
+const char * mport_err_string()
 {
-  size_t len = strlen(err_msg);
-  char *copy = (char *)malloc(len + 1);
-  
-  if (copy == NULL) {
-    fprintf(stderr, "Fatal error: unable to allocate memory for error string: %s\n", err_msg);
-    exit(255);
-  }
-
-  strlcpy(copy, err_msg, len + 1);
-  
-  return copy;
+  return err_msg;
 }
 
 int mport_set_err(int code, const char *msg) 

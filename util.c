@@ -80,6 +80,16 @@ void mport_packagemeta_vec_free(mportPackageMeta **vec)
   free(vec);
 }
 
+/* a wrapper around chdir, to work with our error system */
+int mport_chdir(const char *dir)
+{
+  if (chdir(dir) != 0)
+    RETURN_ERRORX(MPORT_ERR_SYSCALL_FAILED, "Couldn't chdir to %s: %s", dir, strerror(errno));
+    
+  return MPORT_OK;
+}
+    
+
 
 /* deletes the entire directory tree at name.
  * think rm -r filename
@@ -166,9 +176,11 @@ int mport_xsystem(mportInstance *mport, const char *fmt, ...)
   
   if (vasprintf(&cmnd, fmt, args) == -1) {
     /* XXX How will the caller know this is no mem, and not a failed exec? */
+    va_end(args);
     RETURN_ERROR(MPORT_ERR_NO_MEM, "Couldn't allocate xsystem cmnd string.");
   }
- 
+  va_end(args);
+  
   if (mport != NULL && *(mport->root) != '\0') {
     char *chroot_cmd;
     if (asprintf(&chroot_cmd, "%s %s %s", MPORT_CHROOT_BIN, mport->root, cmnd) == -1)
@@ -181,7 +193,6 @@ int mport_xsystem(mportInstance *mport, const char *fmt, ...)
   ret = system(cmnd);
   
   free(cmnd);
-  va_end(args);
   
   return ret;
 }

@@ -52,9 +52,13 @@ int mport_db_do(sqlite3 *db, const char *fmt, ...)
   
   va_start(args, fmt);
   
-  if ((sql = sqlite3_vmprintf(fmt, args)) == NULL) {
-    return MPORT_ERR_NO_MEM;
-  }
+  sql = sqlite3_vmprintf(fmt, args);
+  
+  va_end(args);
+  
+  if (sql == NULL)
+    RETURN_ERROR(MPORT_ERR_NO_MEM, "Couldn't allocate memory for sql statement");
+  
 
   if (sqlite3_exec(db, sql, 0, 0, 0) != SQLITE_OK) {
     sqlite3_free(sql);
@@ -80,10 +84,11 @@ int mport_db_prepare(sqlite3 *db, sqlite3_stmt **stmt, const char * fmt, ...)
   char *sql;
   
   va_start(args, fmt);
+  sql = sqlite3_vmprintf(fmt, args);
+  va_end(args);
   
-  if ((sql = sqlite3_vmprintf(fmt, args)) == NULL) {
-    return MPORT_ERR_NO_MEM;
-  }
+  if (sql == NULL)
+    RETURN_ERROR(MPORT_ERR_NO_MEM, "Couldn't allocate memory for sql statement");
   
   if (sqlite3_prepare_v2(db, sql, -1, stmt, NULL) != SQLITE_OK) {
     SET_ERRORX(MPORT_ERR_SQLITE, "sql error preparing '%s': %s", sql, sqlite3_errmsg(db));
@@ -200,10 +205,12 @@ int mport_get_meta_from_master(mportInstance *mport, mportPackageMeta ***ref, co
   sqlite3 *db = mport->db;
   
   va_start(args, fmt);
-  
-  if ((where = sqlite3_vmprintf(fmt, args)) == NULL) {
+  where = sqlite3_vmprintf(fmt, args);
+  va_end(args);
+    
+  if (where == NULL) 
     RETURN_ERROR(MPORT_ERR_NO_MEM, "Could not build where clause");
-  }
+  
   
   if (mport_db_prepare(db, &stmt, "SELECT count(*) FROM packages WHERE %s", where) != MPORT_OK)
     RETURN_CURRENT_ERROR;

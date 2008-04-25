@@ -33,6 +33,7 @@
 #include <errno.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdarg.h>
 #include "mport.h"
 
 
@@ -118,6 +119,25 @@ void mport_set_confirm_cb(mportInstance *mport, mport_confirm_cb cb)
   mport->confirm_cb = cb;
 }
 
+
+/* callers for the callbacks (only for msg at the moment) */
+void mport_call_msg_cb(mportInstance *mport, const char *fmt, ...)
+{
+  va_list args;
+  char *msg;
+  
+  va_start(args, fmt);
+  (void)vasprintf(&msg, fmt, args);
+  va_end(args);
+  
+  if (msg == NULL) 
+    return; /* No message for you! */
+
+  (mport->msg_cb)(msg);
+  
+  free(msg);
+}
+  
 
 int mport_instance_free(mportInstance *mport) 
 {

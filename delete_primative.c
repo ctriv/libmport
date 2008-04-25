@@ -83,60 +83,45 @@ int mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int for
     type     = (mportPlistEntryType)sqlite3_column_int(stmt, 0);
     data     = (char *)sqlite3_column_text(stmt, 1);
     checksum = (char *)sqlite3_column_text(stmt, 2);
-    char *file;
+
+    char file[FILENAME_MAX];
     /* XXX TMP */
     if (*data == '/') {
-      file = data;
+      snprintf(file, sizeof(file), "%s%s", mport->root, data);
     } else {
-      asprintf(&file, "%s/%s", pack->prefix, data);
+      snprintf(file, sizeof(file), "%s%s/%s", mport->root, pack->prefix, data);
     }
 
     
     switch (type) {
       case PLIST_FILE:
-        
- 
         if (lstat(file, &st) != 0) {
-          char *msg;
-          (void)asprintf(&msg, "Can't stat %s: %s", file, strerror(errno));
-          (mport->msg_cb)(msg);
-          free(msg);
+          mport_call_msg_cb(mport, "Can't stat %s: %s", file, strerror(errno));
           break; /* next asset */
         } 
         
         
         if (S_ISREG(st.st_mode)) {
-          if (MD5File(file, md5) == NULL) {
-            sqlite3_finalize(stmt);
-            RETURN_ERRORX(MPORT_ERR_FILE_NOT_FOUND, "File not found: %s", file);
-          }
+          if (MD5File(file, md5) == NULL) 
+            mport_call_msg_cb(mport, "Can't md5 %s: %s", file, strerror(errno));
           
-          if (strcmp(md5, checksum) != 0) {
-            char *msg;
-            (void)asprintf(&msg, "Checksum mismatch: %s", file);
-            (mport->msg_cb)(msg);
-            free(msg);
-          }
+          if (strcmp(md5, checksum) != 0) 
+            mport_call_msg_cb(mport, "Checksum mismatch: %s", file);
         }
         
-        if (unlink(file) != 0) {
-          sqlite3_finalize(stmt);
-          RETURN_ERRORX(MPORT_ERR_SYSCALL_FAILED, "Could not unlink %s: %s", file, strerror(errno));
-        }
+        if (unlink(file) != 0) 
+          mport_call_msg_cb(mport, "Could not unlink %s: %s", file, strerror(errno));
 
         break;
       case PLIST_UNEXEC:
         if (mport_run_plist_exec(mport, data, cwd, file) != MPORT_OK) {
-          sqlite3_finalize(stmt);
-          RETURN_CURRENT_ERROR;
+          mport_call_msg_cb(mport, "Could not execute %s: %s", data, mport_err_string());
         }
         break;
       case PLIST_DIRRM:
       case PLIST_DIRRMTRY:
-        (void)snprintf(file, FILENAME_MAX, "%s%s/%s", mport->root, cwd, data);
         if (mport_rmdir(file, type == PLIST_DIRRMTRY ? 1 : 0) != MPORT_OK) {
-          sqlite3_finalize(stmt);
-          RETURN_CURRENT_ERROR;
+          mport_call_msg_cb(mport, "Could not remove directory '%s': %s", file, mport_err_string());
         }
         
         break;
