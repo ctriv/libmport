@@ -323,7 +323,7 @@ static int populate_meta_from_stmt(mportPackageMeta *pack, sqlite3 *db, sqlite3_
 
 #define RUN_SQL(db, sql) \
   if (mport_db_do(db, sql) != MPORT_OK) \
-    RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db))
+    RETURN_CURRENT_ERROR
 
 
 int mport_generate_stub_schema(sqlite3 *db) 
@@ -332,18 +332,21 @@ int mport_generate_stub_schema(sqlite3 *db)
   RUN_SQL(db, "CREATE TABLE packages  (pkg text NOT NULL, version text NOT NULL, origin text NOT NULL, lang text, options text, date int NOT NULL, prefix text NOT NULL)");
   RUN_SQL(db, "CREATE TABLE conflicts (pkg text NOT NULL, conflict_pkg text NOT NULL, conflict_version text NOT NULL)");
   RUN_SQL(db, "CREATE TABLE depends   (pkg text NOT NULL, depend_pkgname text NOT NULL, depend_pkgversion text, depend_port text NOT NULL)");
-    
+  RUN_SQL(db, "CREATE TABLE exdepends (pkg text NOT NULL, depend_pkgname text NOT NULL, depend_pkgversion text, depend_port text NOT NULL)"); 
+
   return MPORT_OK;  
 }
 
 int mport_generate_master_schema(sqlite3 *db) 
 {
-  RUN_SQL(db, "CREATE TABLE IF NOT EXISTS packages (pkg text NOT NULL, version text NOT NULL, origin text NOT NULL, prefix text NOT NULL, lang text, options text, date int)");
+  RUN_SQL(db, "CREATE TABLE IF NOT EXISTS packages (pkg text NOT NULL, version text NOT NULL, origin text NOT NULL, prefix text NOT NULL, lang text, options text, date int, status text default 'dirty')");
   RUN_SQL(db, "CREATE UNIQUE INDEX IF NOT EXISTS packages_pkg ON packages (pkg)");
   RUN_SQL(db, "CREATE INDEX IF NOT EXISTS packages_origin ON packages (origin)");
+
   RUN_SQL(db, "CREATE TABLE IF NOT EXISTS depends (pkg text NOT NULL, depend_pkgname text NOT NULL, depend_pkgversion text, depend_port text NOT NULL)");
   RUN_SQL(db, "CREATE INDEX IF NOT EXISTS depends_pkg ON depends (pkg)");
   RUN_SQL(db, "CREATE INDEX IF NOT EXISTS depends_dependpkgname ON depends (depend_pkgname)");
+
   RUN_SQL(db, "CREATE TABLE IF NOT EXISTS assets (pkg text NOT NULL, type int NOT NULL, data text, checksum text)");
   RUN_SQL(db, "CREATE INDEX IF NOT EXISTS assets_pkg ON assets (pkg)");
   RUN_SQL(db, "CREATE INDEX IF NOT EXISTS assets_data ON assets (data)");

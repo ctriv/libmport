@@ -187,12 +187,12 @@ static int do_actual_install(
   
   (mport->progress_init_cb)();
   
-  if (mport_db_do(db, "BEGIN TRANSACTION") != MPORT_OK) 
-    goto ERROR;
 
-  /* Insert the package meta row into the packages table (We use pack here because things might have been twiddled) */  
+  /* Insert the package meta row into the packages table (We use pack here because things might have been twiddled) */
+  /* Note that this will be marked as dirty by default */  
   if (mport_db_do(db, "INSERT INTO packages (pkg, version, origin, prefix, lang, options) VALUES (%Q,%Q,%Q,%Q,%Q,%Q)", pack->name, pack->version, pack->origin, pack->prefix, pack->lang, pack->options) != MPORT_OK)
     goto ERROR;
+
   /* Insert the assets into the master table (We do this one by one because we want to insert file 
    * assets as absolute paths. */
   if (mport_db_prepare(db, &insert, "INSERT INTO assets (pkg, type, data, checksum) values (%Q,?,?,?)", pack->name) != MPORT_OK)
@@ -311,7 +311,7 @@ static int do_actual_install(
   sqlite3_finalize(assets); 
   sqlite3_finalize(insert);
   
-  if (mport_db_do(db, "COMMIT TRANSACTION") != MPORT_OK) 
+  if (mport_db_do(db, "UPDATE packages SET status='clean' WHERE pkg=%Q", pack->name) != MPORT_OK) 
     goto ERROR;
     
   (mport->progress_free_cb)();
@@ -413,7 +413,7 @@ static int display_pkg_msg(mportInstance *mport, mportPackageMeta *pack, const c
   
   buf[st.st_size] = 0;
   
-  (mport->msg_cb)(buf);
+  mport_call_msg_cb(mport, buf);
   
   free(buf);
   
