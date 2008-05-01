@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/delete_primative.c,v 1.1 2008/01/05 22:18:20 ctriv Exp $
+ * $MidnightBSD: src/lib/libmport/delete_primative.c,v 1.2 2008/04/26 17:59:26 ctriv Exp $
  */
 
 
@@ -48,7 +48,7 @@ static int check_for_upwards_depends(mportInstance *, mportPackageMeta *);
 int mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int force) 
 {
   sqlite3_stmt *stmt;
-  int ret;
+  int ret, current, total;
   mportPlistEntryType type;
   char *data, *checksum, *cwd;
   struct stat st;
@@ -58,6 +58,27 @@ int mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int for
     if (check_for_upwards_depends(mport, pack) != MPORT_OK)
       RETURN_CURRENT_ERROR;
   }
+
+  /* get the file count for the progress meter */
+  if (mport_db_prepare(mport->db, &stmt, "SELECT COUNT(*) FROM assets WHERE type=%i AND pkg=%Q", PLIST_FILE, pack->name) != MPORT_OK)
+    RETURN_CURRENT_ERROR;
+
+  switch (sqlite3_step(stmt)) {
+    case SQLITE_ROW:
+      total   = sqlite3_column_int(stmt, 0) + 2;
+      current = 0;
+      sqlite3_finalize(stmt);
+      break;
+    default:
+      SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(mport->db));
+      sqlite3_finalize(stmt);
+      RETURN_CURRENT_ERROR;
+  }
+  
+  (mport->progress_init_cb)();
+
+  if (mport_db_do(mport->db, "UPDATE packages SET status='dirty' WHERE pkg=%Q", pack->name) != MPORT_OK)
+    RETURN_CURRENT_ERROR;
 
   if (run_pkg_deinstall(mport, pack, "DEINSTALL") != MPORT_OK)
     RETURN_CURRENT_ERROR;
@@ -95,6 +116,9 @@ int mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int for
     
     switch (type) {
       case PLIST_FILE:
+        (mport->progress_step_cb)(++current, total, file);
+        
+      
         if (lstat(file, &st) != 0) {
           mport_call_msg_cb(mport, "Can't stat %s: %s", file, strerror(errno));
           break; /* next asset */
@@ -154,11 +178,18 @@ int mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int for
   if (mport_db_do(mport->db, "COMMIT TRANSACTION") != MPORT_OK)
     RETURN_CURRENT_ERROR; 
   
+  (mport->progress_step_cb)(++current, total, "DB Updated");
+
   
   /* clean up the master database file, we don't want to frag it */
   if (mport_db_do(mport->db, "VACUUM") != MPORT_OK)
     RETURN_CURRENT_ERROR;
-    
+
+  (mport->progress_step_cb)(++current, total, "DB Defragged");
+
+  
+  (mport->progress_free_cb)();
+  
   return MPORT_OK;  
 } 
   

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $MidnightBSD: src/lib/libmport/check_preconditions.c,v 1.1 2008/01/05 22:18:20 ctriv Exp $
+ * $MidnightBSD: src/lib/libmport/check_preconditions.c,v 1.3 2008/04/29 01:35:50 ctriv Exp $
  */
 
 #include "mport.h"
