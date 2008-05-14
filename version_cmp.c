@@ -31,6 +31,7 @@
 #include <ctype.h>
 #include <assert.h>
 #include "mport.h"
+#include "mport_private.h"
 
 struct version {
   char *version;

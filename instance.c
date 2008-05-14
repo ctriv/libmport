@@ -35,7 +35,7 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include "mport.h"
-
+#include "mport_private.h"
 
 /* allocate mem for a mportInstance */
 mportInstance * mport_instance_new() 

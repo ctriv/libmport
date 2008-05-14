@@ -28,6 +28,7 @@
 
 
 #include "mport.h"
+#include "mport_private.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>

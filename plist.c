@@ -34,6 +34,8 @@
 #include <string.h>
 #include <ctype.h>
 #include "mport.h"
+#include "mport_private.h"
+
 
 #define CMND_MAGIC_COOKIE '@'
 #define STRING_EQ(r,l) (strcmp((r),(l)) == 0)

@@ -36,6 +36,7 @@
 #include <unistd.h>
 #include <libgen.h>
 #include "mport.h"
+#include "mport_private.h"
 
 /* Package meta-data creation and destruction */
 mportPackageMeta* mport_packagemeta_new() 

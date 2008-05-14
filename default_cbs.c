@@ -32,6 +32,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "mport.h"
+#include "mport_private.h"
 
 void mport_default_msg_cb(const char *msg) 
 {

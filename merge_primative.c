@@ -31,7 +31,7 @@
 #include <archive_entry.h>
 #include <unistd.h>
 #include "mport.h"
-
+#include "mport_private.h"
 
 
 
@@ -104,7 +104,7 @@ static int build_stub_db(sqlite3 **db, char *dbfile, char **filenames)
   
   /* just have to sort the packages (going from unsorted to packages), no big deal... ;) */
    
-  if (mport_db_db(*db, "DELETE FROM exdepends WHERE depend_pkgname EXISTS (SELECT pkg FROM packages WHERE pkg=depend_pkgname)") != MPORT_OK)
+  if (mport_db_db(*db, "DELETE FROM exdepends WHERE depend_pkgname EXISTS (SELECT 1 FROM packages WHERE pkg=depend_pkgname)") != MPORT_OK)
     RETURN_CURRENT_ERROR;
   
   if (sqlite3_close(*db) != SQLITE_OK)

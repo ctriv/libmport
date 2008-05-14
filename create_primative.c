@@ -41,7 +41,7 @@
 #include <archive.h>
 #include <archive_entry.h>
 #include "mport.h"
-
+#include "mport_private.h"
 
 static int create_stub_db(sqlite3 **);
 static int insert_plist(sqlite3 *, mportPlist *, mportPackageMeta *);

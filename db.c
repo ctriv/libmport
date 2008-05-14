@@ -34,7 +34,7 @@
 #include <unistd.h>
 #include <string.h>
 #include "mport.h"
-
+#include "mport_private.h"
 
 static int populate_meta_from_stmt(mportPackageMeta *, sqlite3 *, sqlite3_stmt *);
 static int populate_vec_from_stmt(mportPackageMeta ***, int, sqlite3 *, sqlite3_stmt *);

@@ -43,6 +43,8 @@
 #include <archive.h>
 #include <archive_entry.h>
 #include "mport.h"
+#include "mport_private.h"
+
 
 #define	LINK_TABLE_SIZE 512
 
