@@ -30,13 +30,28 @@
 #include <archive.h>
 #include <archive_entry.h>
 #include <unistd.h>
+#include <stdint.h>
+#include <stdlib.h>
 #include <string.h>
 #include "mport.h"
 #include "mport_private.h"
 
+/* build a hashtable with pkgname keys, values are a struct with fields for
+ * filename, and boolean is_in_db */
+struct table_entry {
+  char *file;
+  short is_in_db;
+  char *name;
+  struct table_entry *next;
+};
 
-static int build_stub_db(sqlite3 **, const char *, const char *, const char **); 
+#define TABLE_SIZE 128
+
+static int build_stub_db(sqlite3 **, const char *, const char *, const char **, struct table_entry **); 
 static int extract_stub_db(const char *, const char *);
+static int insert_into_table(struct table_entry **, char *, const char *);
+static uint32_t SuperFastHash(const char *);
+
 
 #include <err.h>
 
@@ -44,8 +59,12 @@ int mport_merge_primative(const char **filenames, const char *outfile)
 {
   sqlite3 *db;
   mportBundle *bundle;
+  struct table_entry **table;
   char tmpdir[] = "/tmp/mport.XXXXXXXX";
   char *dbfile;
+  
+  if ((table = (struct table_entry **)calloc(TABLE_SIZE, sizeof(struct table_entry *))) == NULL)
+    RETURN_ERROR(MPORT_ERR_NO_MEM, "Couldn't allocate hash table.");
   
   warnx("mport_merge_primative(%p, %s)", filenames, outfile);
   
@@ -56,7 +75,7 @@ int mport_merge_primative(const char **filenames, const char *outfile)
   
   warnx("Building stub");
       
-  if (build_stub_db(&db, tmpdir, dbfile, filenames) != MPORT_OK)
+  if (build_stub_db(&db, tmpdir, dbfile, filenames, table) != MPORT_OK)
     RETURN_CURRENT_ERROR;
   
   warnx("Stub complete");
@@ -80,11 +99,12 @@ int mport_merge_primative(const char **filenames, const char *outfile)
 }
 
 
-static int build_stub_db(sqlite3 **db,  const char *tmpdir,  const char *dbfile,  const char **filenames) 
+static int build_stub_db(sqlite3 **db,  const char *tmpdir,  const char *dbfile,  const char **filenames, struct table_entry **table) 
 {
-  char *tmpdbfile;
+  char *tmpdbfile, *name;
   const char *file     = NULL;
-  int made_table = 0;
+  int made_table = 0, ret;
+  sqlite3_stmt *stmt;
   
   if (asprintf(&tmpdbfile, "%s/%s", tmpdir, "pkg.db") == -1)
     RETURN_ERROR(MPORT_ERR_FILEIO, "Couldn't make stub db tempfile.");
@@ -122,9 +142,35 @@ static int build_stub_db(sqlite3 **db,  const char *tmpdir,  const char *dbfile,
       RETURN_CURRENT_ERROR;
     if (mport_db_do(*db, "DETACH subbundle") != MPORT_OK)
       RETURN_CURRENT_ERROR;    
+
+    /* build our hashtable (pkgname => metadata) up */      
+    if (mport_db_prepare(*db, &stmt, "SELECT pkg FROM subbundle.packages") != MPORT_OK)
+      RETURN_CURRENT_ERROR;
+    
+    while (1) {
+      ret = sqlite3_step(stmt);
+      
+      if (ret == SQLITE_ROW) {
+        name = (char *)sqlite3_column_text(stmt, 0);
+        if (insert_into_table(table, name, file) != MPORT_OK) {
+          sqlite3_finalize(stmt);
+          RETURN_CURRENT_ERROR;
+        }
+      } else if (ret == SQLITE_DONE) {
+        break;
+      } else {
+        SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(*db));
+        sqlite3_finalize(stmt);
+        RETURN_CURRENT_ERROR;
+      }
+    }
+    
+    sqlite3_finalize(stmt);
   }
 
   /* just have to sort the packages (going from unsorted to packages), no big deal... ;) */
+  
+  
   if (sqlite3_close(*db) != SQLITE_OK)
     RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(*db));
   if (sqlite3_open_v2(dbfile, db, SQLITE_OPEN_READONLY, NULL) != SQLITE_OK)
@@ -166,3 +212,91 @@ static int extract_stub_db(const char *filename, const char *destfile)
 }
 
 
+static int insert_into_table(struct table_entry **table, char *name, const char *file)
+{
+  struct table_entry *node, *cur;
+  int hash = SuperFastHash(name) % TABLE_SIZE;
+  
+  if ((node = (struct table_entry *)malloc(sizeof(struct table_entry))) == NULL)
+    RETURN_ERROR(MPORT_ERR_NO_MEM, "Couldn't allocate table entry");
+
+  node->name     = strdup(name);
+  node->file     = strdup(file);
+  node->is_in_db = 0;
+  node->next     = NULL;
+   
+  if (table[hash] == NULL) {     
+    table[hash] = node;   
+  } else {
+    cur = table[hash];
+    while (cur->next != NULL) 
+      cur = cur->next;
+  
+    cur->next = node;
+  }
+  
+  return MPORT_OK;
+}
+
+
+    
+      
+/* Paul Hsieh's fast hash function, from http://www.azillionmonkeys.com/qed/hash.html */
+/* This function has been modified to only work with C strings */
+#undef get16bits
+#if (defined(__GNUC__) && defined(__i386__)) || defined(__WATCOMC__) \
+  || defined(_MSC_VER) || defined (__BORLANDC__) || defined (__TURBOC__)
+#define get16bits(d) (*((const uint16_t *) (d)))
+#endif
+
+#if !defined (get16bits)
+#define get16bits(d) ((((uint32_t)(((const uint8_t *)(d))[1])) << 8)\
+                       +(uint32_t)(((const uint8_t *)(d))[0]) )
+#endif
+
+static uint32_t SuperFastHash(const char * data) 
+{
+    int len = strlen(data);
+    uint32_t hash = len, tmp;
+    int rem;
+
+    if (len <= 0 || data == NULL) return 0;
+
+    rem = len & 3;
+    len >>= 2;
+
+    /* Main loop */
+    for (;len > 0; len--) {
+        hash  += get16bits (data);
+        tmp    = (get16bits (data+2) << 11) ^ hash;
+        hash   = (hash << 16) ^ tmp;
+        data  += 2*sizeof (uint16_t);
+        hash  += hash >> 11;
+    }
+
+    /* Handle end cases */
+    switch (rem) {
+        case 3: hash += get16bits (data);
+                hash ^= hash << 16;
+                hash ^= data[sizeof (uint16_t)] << 18;
+                hash += hash >> 11;
+                break;
+        case 2: hash += get16bits (data);
+                hash ^= hash << 11;
+                hash += hash >> 17;
+                break;
+        case 1: hash += *data;
+                hash ^= hash << 10;
+                hash += hash >> 1;
+    }
+
+    /* Force "avalanching" of final 127 bits */
+    hash ^= hash << 3;
+    hash += hash >> 5;
+    hash ^= hash << 4;
+    hash += hash >> 17;
+    hash ^= hash << 25;
+    hash += hash >> 6;
+
+    return hash;
+}
