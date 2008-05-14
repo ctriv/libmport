@@ -3,8 +3,9 @@
 LIB=		mport
 SRCS=		bundle.c plist.c create_primative.c db.c util.c error.c \
 		install_primative.c instance.c version_cmp.c \
-		check_preconditions.c delete_primative.c default_cbs.c
-
+		check_preconditions.c delete_primative.c default_cbs.c \
+		merge_primative.c
+		
 INCS=		mport.h
 
 

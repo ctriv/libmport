@@ -332,7 +332,6 @@ int mport_generate_stub_schema(sqlite3 *db)
   RUN_SQL(db, "CREATE TABLE packages  (pkg text NOT NULL, version text NOT NULL, origin text NOT NULL, lang text, options text, date int NOT NULL, prefix text NOT NULL)");
   RUN_SQL(db, "CREATE TABLE conflicts (pkg text NOT NULL, conflict_pkg text NOT NULL, conflict_version text NOT NULL)");
   RUN_SQL(db, "CREATE TABLE depends   (pkg text NOT NULL, depend_pkgname text NOT NULL, depend_pkgversion text, depend_port text NOT NULL)");
-  RUN_SQL(db, "CREATE TABLE exdepends (pkg text NOT NULL, depend_pkgname text NOT NULL, depend_pkgversion text, depend_port text NOT NULL)"); 
 
   return MPORT_OK;  
 }

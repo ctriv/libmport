@@ -139,6 +139,9 @@ void mport_packagemeta_vec_free(mportPackageMeta **);
 /* Package creation */
 int mport_create_primative(mportPlist *, mportPackageMeta *);
 
+/* Merge primative */
+int mport_merge_primative(const char **, const char *);
+
 /* Package installation */
 int mport_install_primative(mportInstance *, const char *, const char *);
 

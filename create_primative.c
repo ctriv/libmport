@@ -335,9 +335,6 @@ static int insert_depends(sqlite3 *db, mportPackageMeta *pack)
     
   sqlite3_finalize(stmnt);
 
-  if (mport_db_do(db, "INSERT INTO exdepends SELECT * FROM depends") != MPORT_OK)
-    RETURN_CURRENT_ERROR;
-  
   return MPORT_OK;
 }
 
