@@ -169,8 +169,15 @@ static int build_stub_db(sqlite3 **db,  const char *tmpdir,  const char *dbfile,
   }
 
   /* just have to sort the packages (going from unsorted to packages), no big deal... ;) */
-  
-  
+  while (1) {
+    if (mport_db_do(*db, "INSERT INTO packages SELECT * FROM unsorted WHERE NOT EXISTS (SELECT 1 FROM packages WHERE packages.pkg=unsorted.pkg) AND (NOT EXISTS (SELECT 1 FROM depends WHERE depends.pkg=unsorted.pkg) OR NOT EXISTS (SELECT 1 FROM depends LEFT JOIN packages ON depends.depend=packages.pkg WHERE depends.pkg=unsorted.pkg AND packages.pkg ISNULL))") != MPORT_OK)
+      RETURN_CURRENT_ERROR;
+    if (sqlite3_changes(*db) == 0) /* if there is nothing left to insert, we're done */
+      break;
+  }
+      
+  /* XXX - Should we check that unsorted and packages have the same number of rows? */     
+      
   if (sqlite3_close(*db) != SQLITE_OK)
     RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(*db));
   if (sqlite3_open_v2(dbfile, db, SQLITE_OPEN_READONLY, NULL) != SQLITE_OK)

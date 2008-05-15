@@ -27,7 +27,7 @@
  */
 
 #include "mport.h"
-
+#include "mport_private.h"
 
 
 static int check_if_installed(sqlite3 *, mportPackageMeta *);
