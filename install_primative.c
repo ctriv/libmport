@@ -61,7 +61,7 @@ int mport_install_primative(mportInstance *mport, const char *filename, const ch
   sqlite3 *db = mport->db;
   mportPackageMeta **packs;
   mportPackageMeta *pack;
-  int i;
+  int i, is_update;
   
   if ((bundle = mport_bundle_read_new()) == NULL)
     return MPORT_ERR_NO_MEM;
@@ -92,22 +92,35 @@ int mport_install_primative(mportInstance *mport, const char *filename, const ch
 
     /* if the package has been installed, we update instead! */
     if (mport_pkg_is_installed(mport, pack)) {
-      return mport_update_protoprimative(mport, bundle, pack, tmpdir);
-    }
+      is_update = 1;
+      if (mport_update_prepare(mport, pack) != MPORT_OK) {
+        mport_call_msg_cb(mport, "Unable to prepare %s-%s for update: %s", pack->name, pack->version, mport_err_string());
+        mport_set_error(0, NULL);
+        break;
+      }
+    } else {
+      is_update = 0;
+    }	
     
     /* check if this is installed already, depends, and conflicts */
-    if (mport_check_install_preconditions(mport, pack) != MPORT_OK)
-      RETURN_CURRENT_ERROR;
-
-    /* Run mtree.  Run pkg-install. Etc... */
-    if (do_pre_install(mport, pack, tmpdir) != MPORT_OK)
-      RETURN_CURRENT_ERROR;
-
-    if (do_actual_install(mport, bundle, pack, tmpdir) != MPORT_OK)
-      RETURN_CURRENT_ERROR;
-    
-    if (do_post_install(mport, pack, tmpdir) != MPORT_OK)
-      RETURN_CURRENT_ERROR;
+    if ((mport_check_install_preconditions(mport, pack) != MPORT_OK)
+              ||
+        (do_pre_install(mport, pack, tmpdir) != MPORT_OK)
+              ||
+        (do_actual_install(mport, bundle, pack, tmpdir) != MPORT_OK)
+              ||
+        (do_post_install(mport, pack, tmpdir) != MPORT_OK))
+    {
+      mport_call_msg_cb(mport, "Unable to install %s-%s: %s", pack->name, pack->version, mport_err_string());
+      mport_set_error(0, NULL);
+      
+      if (is_update) {
+        if (mport_update_restore_old(mport, pack) != MPORT_OK)
+          RETURN_CURRENT_ERROR; /* fatal error, cannot continue */
+      }
+      
+      break;
+    }
   } 
   
   mport_packagemeta_vec_free(packs);
