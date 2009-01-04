@@ -410,6 +410,15 @@ static int archive_assetlistfiles(mportBundleWrite *bundle, mportPackageMeta *pa
   mportAssetListEntry *e;
   char filename[FILENAME_MAX];
   char *cwd = pack->prefix;
+  int total = 0;
+  int cur   = 0;
+  
+  (mport->progress_init_cb)();
+  
+  /* get the total number of files */
+  STAILQ_FOREACH(e, assetlist, next) {
+    total++;
+  }
   
   STAILQ_FOREACH(e, assetlist, next) {
     if (e->type == ASSET_CWD) 
@@ -423,7 +432,11 @@ static int archive_assetlistfiles(mportBundleWrite *bundle, mportPackageMeta *pa
     
     if (mport_bundle_write_add_file(bundle, filename, e->data) != MPORT_OK)
       RETURN_CURRENT_ERROR;
+    
+    (mport->progress_step_cb)(++cut, total, e->data);     
   }    
+  
+  (mport->progress_free_cb)();
  
   return MPORT_OK;
 }

@@ -89,6 +89,11 @@ int mport_install_primative(mportInstance *mport, const char *filename, const ch
       free(pack->prefix);
       pack->prefix = strdup(prefix);
     }
+
+    /* if the package has been installed, we update instead! */
+    if (mport_pkg_is_installed(mport, pack)) {
+      return mport_update_protoprimative(mport, bundle, pack, tmpdir);
+    }
     
     /* check if this is installed already, depends, and conflicts */
     if (mport_check_install_preconditions(mport, pack) != MPORT_OK)
