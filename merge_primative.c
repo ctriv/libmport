@@ -223,6 +223,8 @@ static int archive_package_files(mportBundle *bundle, sqlite3 *db, struct table_
   int ret;
   table_entry *cur;
   char *name, *file;
+  struct archive *a;
+  struct archive_entry *entry;
   
   if (mport_db_prepare(db, &stmt, "SELECT pkg FROM packages") != MPORT_OK)
     RETURN_CURRENT_ERROR;
@@ -248,8 +250,22 @@ static int archive_package_files(mportBundle *bundle, sqlite3 *db, struct table_
     }
     
     file = cur->file;
-    
+        
     /* open the tar file, copy the files into the current bundle */
+    a = archive_read_new();
+    
+    if (a == NULL)
+      RETURN_ERROR(MPOER_ERR_ARCHIVE, "Couldn't allocate read archive struct");
+      
+    archive_read_support_compression_bzip2(a);
+    archive_read_support_format_tar(a);
+
+    if (archive_read_open_filename(a, filename, 10240) != MPORT_OK)
+      RETURN_ERROR(MPORT_ERR_ARCHIVE, archive_error_string(a));
+  
+    
+    
+    
 }
 
 
@@ -260,14 +276,11 @@ static int extract_stub_db(const char *filename, const char *destfile)
   struct archive_entry *entry;
   
   if (a == NULL)
-    RETURN_ERROR(MPORT_ERR_ARCHIVE, "Couldn't allocat read archive struct");
+    RETURN_ERROR(MPORT_ERR_ARCHIVE, "Couldn't allocate read archive struct");
 
   archive_read_support_compression_bzip2(a);
   archive_read_support_format_tar(a);
     
-  if (archive_read_open_filename(a, filename, 10240) != MPORT_OK)
-    RETURN_ERROR(MPORT_ERR_ARCHIVE, archive_error_string(a));
-  
   if (archive_read_next_header(a, &entry) != ARCHIVE_OK)
     RETURN_ERROR(MPORT_ERR_ARCHIVE, archive_error_string(a));
   
