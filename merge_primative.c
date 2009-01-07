@@ -49,6 +49,8 @@ struct table_entry {
 
 static int build_stub_db(sqlite3 **, const char *, const char *, const char **, struct table_entry **); 
 static int archive_package_files(mportBundle *, sqlite3 *, struct table_entry **);
+static int find_first_filename_in_package(sqlite3 *, const char *, char **);
+
 
 static int extract_stub_db(const char *, const char *);
 static int insert_into_table(struct table_entry **, char *, const char *);
@@ -91,6 +93,9 @@ int mport_merge_primative(const char **filenames, const char *outfile)
   if (mport_bundle_add_file(bundle, dbfile, MPORT_STUB_DB_FILE) != MPORT_OK)
     RETURN_CURRENT_ERROR;
   
+  /* add all the meta files in the correct order */
+  archive_metafiles(bundle, db, table);
+
   /* add all the other files */     
   archive_package_files(bundle, db, table);  
  
@@ -110,7 +115,6 @@ static int build_stub_db(sqlite3 **db,  const char *tmpdir,  const char *dbfile,
   
   if (asprintf(&tmpdbfile, "%s/%s", tmpdir, "pkg.db") == -1)
     RETURN_ERROR(MPORT_ERR_FILEIO, "Couldn't make stub db tempfile.");
-  
   
   if (sqlite3_open(dbfile, db) != SQLITE_OK)
     RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(*db));
@@ -222,7 +226,7 @@ static int archive_package_files(mportBundle *bundle, sqlite3 *db, struct table_
   sqlite3_stmt *stmt;
   int ret;
   table_entry *cur;
-  char *name, *file;
+  char *name, *file. *first_file;
   struct archive *a;
   struct archive_entry *entry;
   
@@ -260,9 +264,24 @@ static int archive_package_files(mportBundle *bundle, sqlite3 *db, struct table_
     archive_read_support_compression_bzip2(a);
     archive_read_support_format_tar(a);
 
-    if (archive_read_open_filename(a, filename, 10240) != MPORT_OK)
+    if (archive_read_open_filename(a, filename, 10240) != MPORT_OK) {
+      sqlite3_finalize(stmt);
       RETURN_ERROR(MPORT_ERR_ARCHIVE, archive_error_string(a));
+    }
   
+    if (find_first_filename_in_package(db, name, &first_file) != MPORT_OK)) {
+      sqlite3_finalize(stmt);
+      RETURN_CURRENT_ERROR;
+    }
+    
+    /* there was no files in this package - It could happen.  Nothing to 
+     * add to the merged bundle, we move on.
+     */
+    if (first_file == NULL) 
+      continue;
+    
+    
+    
     
     
     
@@ -270,6 +289,7 @@ static int archive_package_files(mportBundle *bundle, sqlite3 *db, struct table_
 
 
 
+/* get the stub database file out of filename and place it at destfile */
 static int extract_stub_db(const char *filename, const char *destfile)
 {
   struct archive *a = archive_read_new();
@@ -404,4 +424,40 @@ static uint32_t SuperFastHash(const char * data)
     hash += hash >> 6;
 
     return hash;
+}
+
+
+/* get the name of the first file in the given package (with name given).
+   It is the responsibility of the calling code to free the memory region
+   allocated by this function.
+   
+   If no file assets where found for the package, this function returns OK but
+   sets *file to NULL.
+   
+ */
+static int find_first_filename_in_package(sqlite3 *db, const char *name, char **file)
+{
+  sqlite3_stmt *stmt;
+  int ret;
+  
+  if (mport_prepare(db, &stmt, "SELECT data FROM assets WHERE type=%Q AND pkg=%Q", PLIST_FILE, name)) 
+    RETURN_CURRENT_ERROR;
+    
+  ret = sqlite3_step(stmt);
+  
+  if (ret == SQLITE_ROW) {
+    *file = strdup(sqlite3_column_text(0, stmt));
+    sqlite3_finalize(stmt);
+    return MPORT_OK;
+  } elsif (ret == SQLITE_DONE) {
+    sqlite3_finalize(stmt);
+    *file = NULL;
+    return MPORT_OK;
+  } else {
+    sqlite3_finalize(stmt);
+    RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
+  }
+
+  // not reached
+  return MPORT_OK;  
 }
