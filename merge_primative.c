@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2008 Chris Reinhardt
+ * Copyright (c) 2008,2009 Chris Reinhardt
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -48,6 +48,8 @@ struct table_entry {
 #define TABLE_SIZE 128
 
 static int build_stub_db(sqlite3 **, const char *, const char *, const char **, struct table_entry **); 
+static int archive_package_files(mportBundle *, sqlite3 *, struct table_entry **);
+
 static int extract_stub_db(const char *, const char *);
 static int insert_into_table(struct table_entry **, char *, const char *);
 static uint32_t SuperFastHash(const char *);
@@ -90,7 +92,7 @@ int mport_merge_primative(const char **filenames, const char *outfile)
     RETURN_CURRENT_ERROR;
   
   /* add all the other files */     
- // archive_package_files(bundle, db, filenames);  /* XXX match filename to bundle name?, we might need to close the db before archiving */q
+  archive_package_files(bundle, db, table);  
  
  /*if (mport_rmtree(tmpdir) != MPORT_OK)
    RETURN_CURRENT_ERROR; */
@@ -176,8 +178,36 @@ static int build_stub_db(sqlite3 **db,  const char *tmpdir,  const char *dbfile,
       break;
   }
       
-  /* XXX - Should we check that unsorted and packages have the same number of rows? */     
+  /* Check that unsorted and packages have the same number of rows. */     
+  if (mport_db_prepare(*db, &stmt, "SELECT COUNT(DISTINCT pkg) FROM packages")
+    RETURN_CURRENT_ERROR;  
+  if (sqlite3_step(stmt)) != SQLITE_ROW) {
+    SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(*db));
+    sqlite3_finalize(stmt);
+    RETURN_CURRENT_ERROR;
+  }
+  
+  int pkgs = sqlite3_column_int(stmt, 0);
+  sqlite3_finalize(stmt);
+  
+  if (mport_db_prepare(*db, &stmt, "SELECT COUNT(DISTINCT pkg) FROM unsorted")
+    RETURN_CURRENT_ERROR;  
+  if (sqlite3_step(stmt)) != SQLITE_ROW) {
+    SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(*db));
+    sqlite3_finalize(stmt);
+    RETURN_CURRENT_ERROR;
+  }
+  
+  int unsort = sqlite3_column_int(stmt, 0);
+  sqlite3_finalize(stmt);
+  
+  if (pkgs != unsort) 
+    RETURN_ERRORX(MPORT_ERR_INTERNAL, "Sorted (%i) and unsorted (%i) counts do no match.", pkgs, unsort);
+    
       
+  /* Close the stub database handle, and reopen as read only to insure that we don't
+   * try to change it after this point 
+   */    
   if (sqlite3_close(*db) != SQLITE_OK)
     RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(*db));
   if (sqlite3_open_v2(dbfile, db, SQLITE_OPEN_READONLY, NULL) != SQLITE_OK)
@@ -185,6 +215,43 @@ static int build_stub_db(sqlite3 **db,  const char *tmpdir,  const char *dbfile,
   
   return MPORT_OK;
 }
+
+
+static int archive_package_files(mportBundle *bundle, sqlite3 *db, struct table_entry **table)
+{
+  sqlite3_stmt *stmt;
+  int ret;
+  table_entry *cur;
+  char *name, *file;
+  
+  if (mport_db_prepare(db, &stmt, "SELECT pkg FROM packages") != MPORT_OK)
+    RETURN_CURRENT_ERROR;
+  
+  while (1) {
+    ret = sqlite3_step(stmt);
+    
+    if (ret == SQLITE_DONE)
+      break;
+    
+    if (ret != SQLITE_ROW) {
+      SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(*db));
+      sqlite3_finalize(stmt);
+      RETURN_CURRENT_ERROR;
+    }
+    
+    name = sqlite3_column_text(stmt, 0);
+    cur  = find_in_table(table, name);
+    
+    if (cur == null) {
+      sqlite3_finalize(stmt);
+      RETURN_ERROX(MPORT_ERR_INTERNAL, "Couldn't find package '%s' in bundle hash table", name);
+    }
+    
+    file = cur->file;
+    
+    /* open the tar file, copy the files into the current bundle */
+}
+
 
 
 static int extract_stub_db(const char *filename, const char *destfile)
@@ -219,6 +286,7 @@ static int extract_stub_db(const char *filename, const char *destfile)
 }
 
 
+/* insert into a name => file pair into the given hash table. */
 static int insert_into_table(struct table_entry **table, char *name, const char *file)
 {
   struct table_entry *node, *cur;
@@ -246,6 +314,23 @@ static int insert_into_table(struct table_entry **table, char *name, const char 
 }
 
 
+static struct table_entry * find_in_table(struct table_entry **table, const char *name)
+{
+  int hash = SuperFastHash(name) % TABLE_SIZE;
+  struct table_entry *e;
+  
+  e = table[hash];  
+  while (e != null) {
+    if (strcmp(e->name, name) == 0)
+      return e;
+      
+    e = e->next;
+  }
+  
+  return e;
+}
+      
+      
     
       
 /* Paul Hsieh's fast hash function, from http://www.azillionmonkeys.com/qed/hash.html */
