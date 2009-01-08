@@ -48,6 +48,7 @@ struct table_entry {
 #define TABLE_SIZE 128
 
 static int build_stub_db(sqlite3 **, const char *, const char *, const char **, struct table_entry **); 
+static int archive_metafiles(mportBundle *, sqlite3 *, struct table_entry **);
 static int archive_package_files(mportBundle *, sqlite3 *, struct table_entry **);
 static int find_first_filename_in_package(sqlite3 *, const char *, char **);
 
@@ -221,6 +222,60 @@ static int build_stub_db(sqlite3 **db,  const char *tmpdir,  const char *dbfile,
 }
 
 
+static int archive_metafiles(mportBundle *bundle, sqlite3 *db, struct table_entry **table) 
+{
+  sqlite3_stmt *stmt;
+  int ret;
+  char *filename, *pkgname;
+  table_entry *match;
+  struct archive *a = NULL;
+  struct archive_entry *entry;
+  
+        
+  if (mport_db_prepare(db, &stmt, "SELECT pkg FROM packages") != MPORT_OK)
+    RETURN_CURRENT_ERROR;
+    
+  while (1) {
+    ret = sqlite3_step(stmt);
+    
+    if (ret == SQLITE_DONE) {
+      sqlite3_finalize(stmt);
+      return MPORT_OK;
+    } else if (ret != SQLITE_ROW) {
+      SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
+      sqlite3_finalize(stmt);
+      RETURN_CURRENT_ERROR;
+    } 
+    
+    /* at this point, ret must be SQLITE_ROW */
+    pkgname  = sqlite3_column_text(stmt, 0);
+    match = find_in_table(table, pkgname);
+    
+    if (match == NULL) {
+      sqlite3_finalize(stmt);
+      RETURN_ERRORX(MPORT_ERR_INTERNAL, "Couldn't find package '%s' in filename table.", pkgname);
+    }
+    
+    filename = match->file;
+    
+    a = archive_read_new();
+    archive_read_support_compression_bzip2(a);
+    archive_read_support_format_tar(a);
+    
+    /* skip the sub db */
+    if (archive_read_next_header(a, &entry))
+      
+
+    
+    
+      
+    
+    
+    
+}
+
+
+
 static int archive_package_files(mportBundle *bundle, sqlite3 *db, struct table_entry **table)
 {
   sqlite3_stmt *stmt;
@@ -261,15 +316,14 @@ static int archive_package_files(mportBundle *bundle, sqlite3 *db, struct table_
     if (a == NULL)
       RETURN_ERROR(MPOER_ERR_ARCHIVE, "Couldn't allocate read archive struct");
       
-    archive_read_support_compression_bzip2(a);
-    archive_read_support_format_tar(a);
-
     if (archive_read_open_filename(a, filename, 10240) != MPORT_OK) {
+      archive_read_finish(a);
       sqlite3_finalize(stmt);
       RETURN_ERROR(MPORT_ERR_ARCHIVE, archive_error_string(a));
     }
   
     if (find_first_filename_in_package(db, name, &first_file) != MPORT_OK)) {
+      archive_read_finish(a);
       sqlite3_finalize(stmt);
       RETURN_CURRENT_ERROR;
     }
@@ -298,19 +352,24 @@ static int extract_stub_db(const char *filename, const char *destfile)
   if (a == NULL)
     RETURN_ERROR(MPORT_ERR_ARCHIVE, "Couldn't allocate read archive struct");
 
-  archive_read_support_compression_bzip2(a);
-  archive_read_support_format_tar(a);
-    
-  if (archive_read_next_header(a, &entry) != ARCHIVE_OK)
-    RETURN_ERROR(MPORT_ERR_ARCHIVE, archive_error_string(a));
+  if (archive_read_next_header(a, &entry) != ARCHIVE_OK) {
+    SET_ERROR(MPORT_ERR_ARCHIVE, archive_error_string(a));
+    archive_read_finish(a);
+    RETURN_CURRENT_ERROR;
+  }
   
-  if (strcmp(archive_entry_pathname(entry), MPORT_STUB_DB_FILE) != 0)
+  if (strcmp(archive_entry_pathname(entry), MPORT_STUB_DB_FILE) != 0) {
+    archive_read_finish(a);
     RETURN_ERROR(MPORT_ERR_MALFORMED_BUNDLE, "Invalid bundle file: stub database is not the first file");
+  }
     
   archive_entry_set_pathname(entry, destfile);
   
-  if (archive_read_extract(a, entry, 0) != ARCHIVE_OK)
-    RETURN_ERROR(MPORT_ERR_ARCHIVE, archive_error_string(a));
+  if (archive_read_extract(a, entry, 0) != ARCHIVE_OK) {
+    SET_ERROR(MPORT_ERR_ARCHIVE, archive_error_string(a));
+    archive_read_finish(a);
+    RETURN_CURRENT_ERROR;
+  }
   
   if (archive_read_finish(a) != ARCHIVE_OK)
     RETURN_ERROR(MPORT_ERR_ARCHIVE, archive_error_string(a));
@@ -350,10 +409,10 @@ static int insert_into_table(struct table_entry **table, char *name, const char 
 static struct table_entry * find_in_table(struct table_entry **table, const char *name)
 {
   int hash = SuperFastHash(name) % TABLE_SIZE;
-  struct table_entry *e;
+  struct table_entry *e = NULL;
   
   e = table[hash];  
-  while (e != null) {
+  while (e != NULL) {
     if (strcmp(e->name, name) == 0)
       return e;
       
