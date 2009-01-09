@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2007,2008 Chris Reinhardt
+ * Copyright (c) 2007,2008,2009 Chris Reinhardt
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -78,6 +78,7 @@ mportBundle* mport_bundle_new()
 {
   return (mportBundle *)malloc(sizeof(mportBundle));
 }
+
 
 /*
  * mport_init_bundle(filename)
@@ -184,7 +185,10 @@ int mport_bundle_add_file(mportBundle *bundle, const char *filename, const char 
   if (archive_entry_size(entry) > 0) {
     len = read(fd, buff, sizeof(buff));
     while (len > 0) {
-      archive_write_data(bundle->archive, buff, len);
+      if (archive_write_data(bundle->archive, buff, len) != len) {
+        SET_ERROR(MPORT_ERR_ARCHIVE, archive_error_string(bundle->archive));
+        break;
+      }
       len = read(fd, buff, sizeof(buff));
     }
   }
@@ -198,6 +202,11 @@ int mport_bundle_add_file(mportBundle *bundle, const char *filename, const char 
 }
 
 
+/* mport_bundle_add_entry(bundle, archive, entry)
+ * 
+ * Add an entry from another archive to the bundle.  The archive struct must be a read 
+ * archive, and the entry must represent the current data segment of the archive.
+ */
 int mport_bundle_add_entry(mportBundle *bundle, struct archive *a, struct archive_entry *entry)
 {
   char buff[BUFF_SIZE];
@@ -210,15 +219,11 @@ int mport_bundle_add_entry(mportBundle *bundle, struct archive *a, struct archiv
   size = archive_entry_size(entry);
   
   while (size > 0) {  
-    if (archive_read_data(bundle->archive, buff, sizeof(buff))) != ARCHIVE_OK) 
-      RETURN_ERROR(MPORT_ERR_ARCHIVE, archive_error_string(bundle->archive));
+    if (archive_read_data(a, buff, sizeof(buff))) != ARCHIVE_OK) 
+      RETURN_ERROR(MPORT_ERR_ARCHIVE, archive_error_string(a));
 
     /* don't write the whole buffer if it isn't full */
-    if (size < sizeof(buff)) {
-      bytes_to_write = size;
-    } else {
-      bytes_to_write = sizeof(buff);
-    }
+    bytes_to_write = size < sizeof(buff) ? size : sizeof(buff);
 
     if (archive_write_data(bundle->archive, buff, bytes_to_write)) < 0)
       RETURN_ERROR(MPORT_ERR_ARCHIVE, archive_error_string(bundle->archive));
@@ -230,6 +235,10 @@ int mport_bundle_add_entry(mportBundle *bundle, struct archive *a, struct archiv
 }
 
 
+/* lookup a file with more than one link in the link table.  If we find an entry
+ * for the inode in the table, mark this incoming file as a hardlink to the prior file.
+ * otherwise insert the new file into the table
+ */
 static int lookup_hardlink(mportBundle *bundle, struct archive_entry *entry, const struct stat *st)
 {
   struct links_table *links = bundle->links;
