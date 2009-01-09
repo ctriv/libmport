@@ -149,6 +149,8 @@ int mport_install_primative(mportInstance *, const char *, const char *);
 /* Package deletion */
 int mport_delete_primative(mportInstance *, mportPackageMeta *, int);
 
+/* DB Stuff */
+int mport_get_meta_from_master(mportInstance *, mportPackageMeta ***, const char *, ...);
 
 /* version comparing */
 int mport_version_cmp(const char *, const char *);
