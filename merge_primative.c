@@ -225,26 +225,25 @@ static int build_stub_db(sqlite3 **db,  const char *tmpdir,  const char *dbfile,
 static int archive_metafiles(mportBundle *bundle, sqlite3 *db, struct table_entry **table) 
 {
   sqlite3_stmt *stmt;
-  int ret;
+  int ret, sret;
   char *filename, *pkgname;
-  table_entry *match;
+  table_entry *match = NULL;
   struct archive *a = NULL;
   struct archive_entry *entry;
   
+  ret = MPORT_OK;
         
   if (mport_db_prepare(db, &stmt, "SELECT pkg FROM packages") != MPORT_OK)
     RETURN_CURRENT_ERROR;
     
   while (1) {
-    ret = sqlite3_step(stmt);
+    sret = sqlite3_step(stmt);
     
-    if (ret == SQLITE_DONE) {
-      sqlite3_finalize(stmt);
-      return MPORT_OK;
-    } else if (ret != SQLITE_ROW) {
-      SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
-      sqlite3_finalize(stmt);
-      RETURN_CURRENT_ERROR;
+    if (sret == SQLITE_DONE) {
+      goto DONE;
+    } else if (sret != SQLITE_ROW) {
+      ret = SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
+      goto DONE;
     } 
     
     /* at this point, ret must be SQLITE_ROW */
@@ -252,26 +251,46 @@ static int archive_metafiles(mportBundle *bundle, sqlite3 *db, struct table_entr
     match = find_in_table(table, pkgname);
     
     if (match == NULL) {
-      sqlite3_finalize(stmt);
-      RETURN_ERRORX(MPORT_ERR_INTERNAL, "Couldn't find package '%s' in filename table.", pkgname);
+      ret = SET_ERRORX(MPORT_ERR_INTERNAL, "Couldn't find package '%s' in filename table.", pkgname);
+      goto DONE;
     }
     
     filename = match->file;
     
     a = archive_read_new();
-    archive_read_support_compression_bzip2(a);
-    archive_read_support_format_tar(a);
-    
-    /* skip the sub db */
-    if (archive_read_next_header(a, &entry))
-      
+
+    if (archive_read_open_filename(a, filename, 10240) != MPORT_OK) {
+      archive_read_finish(a);
+      ret = SET_ERRORX(MPORT_ERR_ARCHIVE, "Unable to open %s: %s", filename, archive_error_string(a));
+      goto DONE;
+    }
 
     
+    /* skip the sub db */
+    if (archive_read_next_header(a, &entry) != ARCHIVE_OK) {
+      archive_read_finish(a);
+      ret = SET_ERRORX(MPORT_ERR_ARCHIVE, "Unable to read %s: %s", filename, archive_error_string(a));
+      goto DONE;
+    }
     
+    
+    do {
+      if (archive_read_next_header(a, &entry) != ARCHIVE_OK) {
+        archive_read_finish(a);
+        ret = SET_ERRORX(MPORT_ERR_ARCHIVE, "Unable to read %s: %s", filename, archive_error_string(a));
+        goto DONE;
+      } 
       
-    
-    
-    
+      if ((ret = mport_bunde_add_entry(bundle, a, entry)) != MPORT_OK) {
+        archive_read_finish(a);
+        goto DONE;
+      }
+    } while (*(archive_entry_pathname(entry)) == '+');
+  }
+  
+  DONE:
+    sqlite3_finalize(stmt);
+    return ret;
 }
 
 

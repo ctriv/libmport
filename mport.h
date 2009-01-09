@@ -82,6 +82,7 @@ mportBundle* mport_bundle_new(void);
 int mport_bundle_init(mportBundle *, const char *);
 int mport_bundle_finish(mportBundle *);
 int mport_bundle_add_file(mportBundle *, const char *, const char *);
+int mport_bundle_add_entry(mportBundle *, struct archive *, struct archive_entry *);
 
 
 /* For now this is just the FreeBSD list, this will change soon. */

@@ -47,6 +47,7 @@
 
 
 #define	LINK_TABLE_SIZE 512
+#define BUFF_SIZE 128 * 1024;
 
 struct links_table {
   size_t nbuckets;
@@ -134,7 +135,7 @@ int mport_bundle_add_file(mportBundle *bundle, const char *filename, const char 
   struct archive_entry *entry;
   struct stat st;
   int fd, len;
-  char buff[1024*64];
+  char buff[BUFF_SIZE];
 
   if (lstat(filename, &st) != 0) {
     RETURN_ERROR(MPORT_ERR_SYSCALL_FAILED, strerror(errno));
@@ -195,6 +196,39 @@ int mport_bundle_add_file(mportBundle *bundle, const char *filename, const char 
 
   return MPORT_OK;  
 }
+
+
+int mport_bundle_add_entry(mportBundle *bundle, struct archive *a, struct archive_entry *entry)
+{
+  char buff[BUFF_SIZE];
+  size_t size, bytes_to_write;
+  int aret;
+  
+  if (archive_write_header(bundle->archive, entry) != ARCHIVE_OK)
+    RETURN_ERROR(MPORT_ERR_ARCHIVE, archive_error_string(bundle->archive);
+
+  size = archive_entry_size(entry);
+  
+  while (size > 0) {  
+    if (archive_read_data(bundle->archive, buff, sizeof(buff))) != ARCHIVE_OK) 
+      RETURN_ERROR(MPORT_ERR_ARCHIVE, archive_error_string(bundle->archive));
+
+    /* don't write the whole buffer if it isn't full */
+    if (size < sizeof(buff)) {
+      bytes_to_write = size;
+    } else {
+      bytes_to_write = sizeof(buff);
+    }
+
+    if (archive_write_data(bundle->archive, buff, bytes_to_write)) < 0)
+      RETURN_ERROR(MPORT_ERR_ARCHIVE, archive_error_string(bundle->archive));
+        
+    size -= bytes_to_write;
+  }  
+  
+  return MPORT_OK;
+}
+
 
 static int lookup_hardlink(mportBundle *bundle, struct archive_entry *entry, const struct stat *st)
 {
