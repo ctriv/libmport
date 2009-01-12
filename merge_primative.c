@@ -286,6 +286,10 @@ static int archive_metafiles(mportBundle *bundle, sqlite3 *db, struct table_entr
         goto DONE;
       }
     } while (*(archive_entry_pathname(entry)) == '+');
+    
+    
+    archive_read_finish(a);
+    
   }
   
   DONE:
