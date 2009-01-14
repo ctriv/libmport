@@ -345,7 +345,7 @@ static int archive_package_files(mportBundle *bundle, sqlite3 *db, struct table_
       RETURN_ERROR(MPORT_ERR_ARCHIVE, archive_error_string(a));
     }
   
-    if (mport_db_preprare(db, &files, "SELECT data FROM assets WHERE pkg=%Q AND type=%i", pkgname, PLIST_FILE) != MPORT_OK)
+    if (mport_db_preprare(db, &files, "SELECT data FROM assets WHERE pkg=%Q AND type=%i", pkgname, PLIST_FILE) != MPORT_OK) {
       archive_read_finish(a);
       sqlite3_finalize(stmt);
       RETURN_CURRENT_ERROR;
