@@ -301,10 +301,10 @@ static int archive_metafiles(mportBundle *bundle, sqlite3 *db, struct table_entr
 
 static int archive_package_files(mportBundle *bundle, sqlite3 *db, struct table_entry **table)
 {
-  sqlite3_stmt *stmt;
+  sqlite3_stmt *stmt, *files;
   int ret;
   table_entry *cur;
-  char *name, *file. *first_file;
+  char *pkgname, *file. *first_file;
   struct archive *a;
   struct archive_entry *entry;
   
@@ -323,12 +323,12 @@ static int archive_package_files(mportBundle *bundle, sqlite3 *db, struct table_
       RETURN_CURRENT_ERROR;
     }
     
-    name = sqlite3_column_text(stmt, 0);
-    cur  = find_in_table(table, name);
+    pkgname = sqlite3_column_text(stmt, 0);
+    cur     = find_in_table(table, pkgname);
     
     if (cur == null) {
       sqlite3_finalize(stmt);
-      RETURN_ERROX(MPORT_ERR_INTERNAL, "Couldn't find package '%s' in bundle hash table", name);
+      RETURN_ERROX(MPORT_ERR_INTERNAL, "Couldn't find package '%s' in bundle hash table", pkgname);
     }
     
     file = cur->file;
@@ -345,23 +345,60 @@ static int archive_package_files(mportBundle *bundle, sqlite3 *db, struct table_
       RETURN_ERROR(MPORT_ERR_ARCHIVE, archive_error_string(a));
     }
   
-    if (find_first_filename_in_package(db, name, &first_file) != MPORT_OK)) {
+    if (mport_db_preprare(db, &files, "SELECT data FROM assets WHERE pkg=%Q AND type=%i", pkgname, PLIST_FILE) != MPORT_OK)
       archive_read_finish(a);
       sqlite3_finalize(stmt);
       RETURN_CURRENT_ERROR;
     }
     
-    /* there was no files in this package - It could happen.  Nothing to 
-     * add to the merged bundle, we move on.
-     */
-    if (first_file == NULL) 
-      continue;
-    
-    
-    
-    
-    
-    
+    while (1) {
+      int fret = sqlite3_step(files);
+
+      if (fret == SQLITE_DONE) {
+        sqlite3_finalize(files);
+        break;
+      } else if (fret != SQLITE_ROW) {
+        SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db);
+        sqlite3_finalize(stmt);
+        sqlite3_finalize(files);
+        archive_read_finish(a);
+        RETURN_CURRENT_ERROR;
+      }
+      
+      file = sqlite3_column_text(files, 0);
+      
+      if (archive_read_next_header(a, &entry) != ARCHIVE_OK) {
+        archive_read_finish(a);
+        ret = SET_ERRORX(MPORT_ERR_ARCHIVE, "Unable to read %s: %s", filename, archive_error_string(a));
+        sqlite3_finalize(stmt);
+        sqlite3_finalize(files);
+        RETURN_CURRENT_ERROR;
+      } 
+      
+      if (strcmp(file, archive_entry_pathname(entry)) != 0) {
+        SET_ERRORX(MPORT_ERR_INTERNAL, "Plist to archive mismatch in package '%s'", pkgname);
+        archive_read_finish(a);
+        sqlite3_finalize(stmt);
+        sqlite3_finalize(files);
+        RETURN_CURRENT_ERROR;
+      }
+  
+      if ((ret = mport_bunde_add_entry(bundle, a, entry)) != MPORT_OK) {
+        archive_read_finish(a);
+        sqlite3_finalize(stmt);
+        sqlite3_finalize(files);
+        RETURN_CURRENT_ERROR;
+      } 
+    }
+  
+    /* we're done with this package, onto the next one */
+    sqlite3_finalize(files);
+    archive_read_finish(a);
+  } 
+  
+  sqlite3_finalize(stmt);
+  
+  return MPORT_OK;   
 }
 
 
@@ -509,37 +546,3 @@ static uint32_t SuperFastHash(const char * data)
 }
 
 
-/* get the name of the first file in the given package (with name given).
-   It is the responsibility of the calling code to free the memory region
-   allocated by this function.
-   
-   If no file assets where found for the package, this function returns OK but
-   sets *file to NULL.
-   
- */
-static int find_first_filename_in_package(sqlite3 *db, const char *name, char **file)
-{
-  sqlite3_stmt *stmt;
-  int ret;
-  
-  if (mport_prepare(db, &stmt, "SELECT data FROM assets WHERE type=%Q AND pkg=%Q", PLIST_FILE, name)) 
-    RETURN_CURRENT_ERROR;
-    
-  ret = sqlite3_step(stmt);
-  
-  if (ret == SQLITE_ROW) {
-    *file = strdup(sqlite3_column_text(0, stmt));
-    sqlite3_finalize(stmt);
-    return MPORT_OK;
-  } elsif (ret == SQLITE_DONE) {
-    sqlite3_finalize(stmt);
-    *file = NULL;
-    return MPORT_OK;
-  } else {
-    sqlite3_finalize(stmt);
-    RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
-  }
-
-  // not reached
-  return MPORT_OK;  
-}
