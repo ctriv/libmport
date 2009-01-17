@@ -50,16 +50,23 @@ struct table_entry {
 static int build_stub_db(sqlite3 **, const char *, const char *, const char **, struct table_entry **); 
 static int archive_metafiles(mportBundle *, sqlite3 *, struct table_entry **);
 static int archive_package_files(mportBundle *, sqlite3 *, struct table_entry **);
-static int find_first_filename_in_package(sqlite3 *, const char *, char **);
-
-
 static int extract_stub_db(const char *, const char *);
+
+static struct table_entry * find_in_table(struct table_entry **, const char *);
 static int insert_into_table(struct table_entry **, char *, const char *);
 static uint32_t SuperFastHash(const char *);
 
 
 #include <err.h>
 
+/*
+ * mport_merge_primative(filenames, outfile)
+ *
+ * Takes a list of bundle filenames and an output filename.  This function will create
+ * a new bundle file containing all the packages un the different input bundle files,
+ * named `outfile`.  Care is taken to not have duplicates, to ensure that the exterior
+ * depends are correct, and that the packages are in an optimal order for installation.
+ */ 
 int mport_merge_primative(const char **filenames, const char *outfile)
 {
   sqlite3 *db;
@@ -79,7 +86,8 @@ int mport_merge_primative(const char **filenames, const char *outfile)
     RETURN_ERROR(MPORT_ERR_NO_MEM, "Couldn't build merge database name.");
   
   warnx("Building stub");
-      
+
+  /* this function merges the stub databases into one db. */      
   if (build_stub_db(&db, tmpdir, dbfile, filenames, table) != MPORT_OK)
     RETURN_CURRENT_ERROR;
   
@@ -107,6 +115,11 @@ int mport_merge_primative(const char **filenames, const char *outfile)
 }
 
 
+/* This function goes thru each file, and builds up the merged database as
+ * filename `dbfile`.  It also builds up the hashtable of package -> filename pairs.
+ * When this function is done, db points to a readonly sqlite object representing
+ * the merged db.
+ */
 static int build_stub_db(sqlite3 **db,  const char *tmpdir,  const char *dbfile,  const char **filenames, struct table_entry **table) 
 {
   char *tmpdbfile, *name;
@@ -128,8 +141,10 @@ static int build_stub_db(sqlite3 **db,  const char *tmpdir,  const char *dbfile,
     if (extract_stub_db(file, tmpdbfile) != MPORT_OK)
       RETURN_CURRENT_ERROR;
 
-    /* XXX we should do a transaction per loop, for nothing else it's faster */    
     if (mport_db_do(*db, "ATTACH %Q AS subbundle", tmpdbfile) != MPORT_OK)
+      RETURN_CURRENT_ERROR;
+    
+    if (mport_db_do(*db, "BEGIN TRANSACTION") != MPORT_OK)
       RETURN_CURRENT_ERROR;
       
     if (made_table == 0) { 
@@ -172,6 +187,10 @@ static int build_stub_db(sqlite3 **db,  const char *tmpdir,  const char *dbfile,
       }
     }
     
+    if (mport_db_do(*db, "COMMIT TRANSACTION") != MPORT_OK)
+      RETURNC_CURRENT_ERROR;
+      
+        
     sqlite3_finalize(stmt);
   }
 
