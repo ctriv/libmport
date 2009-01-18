@@ -47,7 +47,7 @@
 
 
 #define	LINK_TABLE_SIZE 512
-#define BUFF_SIZE 128 * 1024;
+#define BUFF_SIZE       131072 /* 128k */
 
 struct links_table {
   size_t nbuckets;
@@ -78,7 +78,7 @@ mportBundle* mport_bundle_new()
 {
   return (mportBundle *)malloc(sizeof(mportBundle));
 }
-
+ 
 
 /*
  * mport_init_bundle(filename)
@@ -214,18 +214,18 @@ int mport_bundle_add_entry(mportBundle *bundle, struct archive *a, struct archiv
   int aret;
   
   if (archive_write_header(bundle->archive, entry) != ARCHIVE_OK)
-    RETURN_ERROR(MPORT_ERR_ARCHIVE, archive_error_string(bundle->archive);
+    RETURN_ERROR(MPORT_ERR_ARCHIVE, archive_error_string(bundle->archive));
 
   size = archive_entry_size(entry);
   
   while (size > 0) {  
-    if (archive_read_data(a, buff, sizeof(buff))) != ARCHIVE_OK) 
+    if (archive_read_data(a, buff, sizeof(buff)) != ARCHIVE_OK) 
       RETURN_ERROR(MPORT_ERR_ARCHIVE, archive_error_string(a));
 
     /* don't write the whole buffer if it isn't full */
     bytes_to_write = size < sizeof(buff) ? size : sizeof(buff);
 
-    if (archive_write_data(bundle->archive, buff, bytes_to_write)) < 0)
+    if (archive_write_data(bundle->archive, buff, bytes_to_write) < 0)
       RETURN_ERROR(MPORT_ERR_ARCHIVE, archive_error_string(bundle->archive));
         
     size -= bytes_to_write;
