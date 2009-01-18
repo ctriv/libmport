@@ -211,8 +211,7 @@ int mport_bundle_add_entry(mportBundle *bundle, struct archive *a, struct archiv
 {
   char buff[BUFF_SIZE];
   size_t size, bytes_to_write;
-  int aret;
-  
+
   if (archive_write_header(bundle->archive, entry) != ARCHIVE_OK)
     RETURN_ERROR(MPORT_ERR_ARCHIVE, archive_error_string(bundle->archive));
 
