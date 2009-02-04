@@ -31,45 +31,27 @@
 
 
 static int check_if_installed(sqlite3 *, mportPackageMeta *);
-static int check_if_older_installed(sqlite3 *, mportPackageMeta *);
 static int check_conflicts(sqlite3 *, mportPackageMeta *);
-static int check_depends(sqlite3 *, mportPackageMeta *);
+static int check_depends(mportInstance *mport, mportPackageMeta *, mport_depend_resolver);
 
 
-
-int mport_check_update_preconditions(mportInstance *mport, mportPackageMeta *pack)
-{
-  if (check_if_older_installed(mport->db, pack) != MPORT_OK)
-    RETURN_CURRENT_ERROR;
-  if (check_conflicts(mport->db, pack) != MPORT_OK)
-    RETURN_CURRENT_ERROR;
-  if (check_depends(mport->db, pack) != MPORT_OK)
-    RETURN_CURRENT_ERROR;
-    
-  return MPORT_OK;
-}
 
 
 /* check to see if the package is already installed, if it has any
  * conflicts, and that all its depends are installed.
  */
-int mport_check_install_preconditions(mportInstance *mport, mportPackageMeta *pack) 
+int mport_check_install_preconditions(mportInstance *mport, mportPackageMeta *pack, mport_depend_resolver res) 
 {
   if (check_if_installed(mport->db, pack) != MPORT_OK)
     RETURN_CURRENT_ERROR;
   if (check_conflicts(mport->db, pack) != MPORT_OK)
     RETURN_CURRENT_ERROR;
-  if (check_depends(mport->db, pack) != MPORT_OK)
+  if (check_depends(mport, pack, res) != MPORT_OK)
     RETURN_CURRENT_ERROR;
     
   return MPORT_OK;
 }
 
-
-static int check_if_older_installed(sqlite3 *db, mportPackageMeta *pack)
-{
-  /* write me */
-}
 
 
 static int check_if_installed(sqlite3 *db, mportPackageMeta *pack)
@@ -139,8 +121,9 @@ static int check_conflicts(sqlite3 *db, mportPackageMeta *pack)
 }
 
 
-static int check_depends(sqlite3 *db, mportPackageMeta *pack)
+static int check_depends(mportInstance *mport, mportPackageMeta *pack, mport_depend_resolver res)
 {
+  sqlite3 *db = mport->db;
   sqlite3_stmt *stmt, *lookup;
   const char *depend_pkg, *depend_version, *inst_version;
   int ret;
@@ -199,17 +182,19 @@ static int check_depends(sqlite3 *db, mportPackageMeta *pack)
           }
 
           if (!ok) {
-            SET_ERRORX(MPORT_ERR_MISSING_DEPEND, "%s depends on %s version %s.  Version %s is installed.", pack->name, depend_pkg, depend_version, inst_version);
-            sqlite3_finalize(lookup); sqlite3_finalize(stmt);
-            RETURN_CURRENT_ERROR;
+            if ((res)(mport, pack, depend_pkg) != MPORT_OK) {
+              sqlite3_finalize(lookup); sqlite3_finalize(stmt);
+              RETURN_CURRENT_ERROR;
+            }
           }
           
           break;
         case SQLITE_DONE:
           /* this depend isn't installed. */
-          SET_ERRORX(MPORT_ERR_MISSING_DEPEND, "%s depends on %s, which is not installed.", pack->name, depend_pkg);
-          sqlite3_finalize(lookup); sqlite3_finalize(stmt);
-          RETURN_CURRENT_ERROR;
+          if ((res)(mport, pack, depend_pkg) != MPORT_OK) {
+            sqlite3_finalize(lookup); sqlite3_finalize(stmt);
+            RETURN_CURRENT_ERROR;
+          }
           break;
         default:
           SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));

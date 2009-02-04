@@ -54,7 +54,7 @@ static int archive_assetlistfiles(mportBundleWrite *, mportPackageMeta *, mportA
 static int clean_up(const char *);
 
 
-int mport_create_primative(mportAssetList *assetlist, mportPackageMeta *pack)
+MPORT_PUBLIC_API mport_create_primative(mportAssetList *assetlist, mportPackageMeta *pack)
 {
   
   int ret;
@@ -413,7 +413,7 @@ static int archive_assetlistfiles(mportBundleWrite *bundle, mportPackageMeta *pa
   int total = 0;
   int cur   = 0;
   
-  (mport->progress_init_cb)();
+  /* (mport->progress_init_cb)(); */
   
   /* get the total number of files */
   STAILQ_FOREACH(e, assetlist, next) {
@@ -433,10 +433,10 @@ static int archive_assetlistfiles(mportBundleWrite *bundle, mportPackageMeta *pa
     if (mport_bundle_write_add_file(bundle, filename, e->data) != MPORT_OK)
       RETURN_CURRENT_ERROR;
     
-    (mport->progress_step_cb)(++cut, total, e->data);     
+    /* (mport->progress_step_cb)(++cut, total, e->data);     */
   }    
   
-  (mport->progress_free_cb)();
+  /* (mport->progress_free_cb)(); */
  
   return MPORT_OK;
 }

@@ -47,9 +47,24 @@ static int run_pkg_install(mportInstance *, const char *, mportPackageMeta *, co
 static int run_mtree(mportInstance *, const char *, mportPackageMeta *);
 static int display_pkg_msg(mportInstance *, mportPackageMeta *, const char *);
 static int clean_up(mportInstance *, const char *);
+static int fail(mportInstance *, mportPackageMeta *, const char *);
 static int rollback(void);
 
-int mport_install_primative(mportInstance *mport, const char *filename, const char *prefix) 
+
+static int fail(mportInstance *mport, mportPackageMeta *pkg, const char *depend)
+{
+  RETURN_ERRORX(MPORT_ERR_MISSING_DEPEND, "%s depends on %s, which is not installed.", pkg->name, depend);
+}
+
+
+MPORT_PUBLIC_API mport_install_primative(mportInstance *mport, const char *filename, const char *prefix) 
+{
+  return mport_install_handler(mport, &fail, filename, prefix);
+}
+
+
+/* this the private API that the library uses, with a flexible callback for resolving depends */
+int mport_install_handler(mportInstance *mport, mport_depend_resolver resolver, const char *filename, const char *prefix)
 {
   /* 
    * The general strategy here is to extract the meta-files into a tempdir, but
@@ -103,7 +118,7 @@ int mport_install_primative(mportInstance *mport, const char *filename, const ch
     }	
     
     /* check if this is installed already, depends, and conflicts */
-    if ((mport_check_install_preconditions(mport, pack) != MPORT_OK)
+    if ((mport_check_install_preconditions(mport, pack, resolver) != MPORT_OK)
               ||
         (do_pre_install(mport, pack, tmpdir) != MPORT_OK)
               ||

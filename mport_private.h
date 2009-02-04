@@ -37,12 +37,19 @@
 #endif
 
 
+#define MPORT_PUBLIC_API int
+
+/* private install API */
+typedef int (*mport_depend_resolver)(mportInstance *, mportPackageMeta *, const char *);
+int mport_install_handler(mportInstance *, mport_depend_resolver, const char *, const char *);
+
+
+
 /* callback syntaxtic sugar */
 void mport_call_msg_cb(mportInstance *, const char *, ...);
 
 /* precondition checking */
-int mport_check_update_preconditions(mportInstance *, mportPackageMeta *);
-int mport_check_install_preconditions(mportInstance *, mportPackageMeta *);
+int mport_check_install_preconditions(mportInstance *, mportPackageMeta *, mport_depend_resolver);
 
 /* schema */
 int mport_generate_master_schema(sqlite3 *);
