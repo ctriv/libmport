@@ -35,6 +35,12 @@ static int check_conflicts(sqlite3 *, mportPackageMeta *);
 static int check_depends(mportInstance *mport, mportPackageMeta *, mport_depend_resolver);
 
 
+/* check to see if a file is installed */
+int mport_pkg_is_installed(mportInstance *mport, mportPackageMeta *pkg)
+{
+  return check_if_installed(mport, pkg);
+}
+
 
 
 /* check to see if the package is already installed, if it has any
