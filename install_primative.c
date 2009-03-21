@@ -106,11 +106,11 @@ int mport_install_handler(mportInstance *mport, mport_depend_resolver resolver, 
     }
 
     /* if the package has been installed, we update instead! */
-    if (mport_pkg_is_installed(mport, pack)) {
+    if (mport_older_pkg_is_installed(mport, pack)) {
       is_update = 1;
       if (mport_update_prepare(mport, pack) != MPORT_OK) {
         mport_call_msg_cb(mport, "Unable to prepare %s-%s for update: %s", pack->name, pack->version, mport_err_string());
-        mport_set_error(0, NULL);
+        mport_set_err(0, NULL);
         break;
       }
     } else {
@@ -127,7 +127,7 @@ int mport_install_handler(mportInstance *mport, mport_depend_resolver resolver, 
         (do_post_install(mport, pack, tmpdir) != MPORT_OK))
     {
       mport_call_msg_cb(mport, "Unable to install %s-%s: %s", pack->name, pack->version, mport_err_string());
-      mport_set_error(0, NULL);
+      mport_set_err(0, NULL);
       
       if (is_update) {
         if (mport_update_restore_old(mport, pack) != MPORT_OK)

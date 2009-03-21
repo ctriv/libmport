@@ -35,10 +35,30 @@ static int check_conflicts(sqlite3 *, mportPackageMeta *);
 static int check_depends(mportInstance *mport, mportPackageMeta *, mport_depend_resolver);
 
 
-/* check to see if a file is installed */
-int mport_pkg_is_installed(mportInstance *mport, mportPackageMeta *pkg)
+/* check to see if an older version of a package is installed. */
+int mport_older_pkg_is_installed(mportInstance *mport, mportPackageMeta *pkg)
 {
-  return check_if_installed(mport, pkg);
+  sqlite3_stmt *stmt;
+  int ret;
+    
+  if (mport_db_prepare(mport->db, &stmt, "SELECT 1 FROM packages WHERE pkg=%Q and mport_version_cmp(version, %Q) < 0", pkg->name, pkg->version) != MPORT_OK)
+    RETURN_CURRENT_ERROR;
+  
+  switch (sqlite3_step(stmt)) {
+    case SQLITE_ROW:
+      ret = 1;
+      break;
+    case SQLITE_DONE:
+      ret = 0;
+      break;
+    default:
+      /* some sort of error has occured, given the way where handling returns here, how do we report it? */
+      (void)fprintf(stderr, "sqlite error: %s\n", sqlite3_errmsg(mport->db));
+      ret = 0;
+  }
+  
+  sqlite3_finalize(stmt);
+  return ret;
 }
 
 
