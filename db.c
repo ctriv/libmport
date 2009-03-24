@@ -241,7 +241,63 @@ int mport_get_meta_from_master(mportInstance *mport, mportPackageMeta ***ref, co
   
   return ret;
 }
+
+
+/* mport_get_depends_from_master(mportInstance *mport, mportPackageMeta *pkg)
+ * 
+ * Populate the depends of a pkg using the data in the master database.  
+ */
+int mport_get_depends_from_master(mportInstance *mport, mportPackageMeta *pkg)
+{
+  int count = 0;
+  int ret;
+  int i = 0;
+  sqlite3_stmt *stmt;
   
+  /* if the depends are set, there's nothing for us to do */
+  
+  if (pkg->depends != NULL) 
+    return MPORT_OK;
+    
+  if (mport_db_prepare(mport->db, &stmt, "SELECT COUNT(*) FROM depends WHERE pkg=%Q", pkg->name) != MPORT_OK)
+    RETURN_CURRENT_ERROR;
+    
+  if (sqlite3_step(stmt) != SQLITE_ROW) {
+    sqlite3_finalize(stmt);
+    RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(mport->db));
+  }
+  
+  count = sqlite3_column_int(stmt, 0);
+  sqlite3_finalize(stmt);
+  
+  if (count == 0) 
+    return MPORT_OK;    /* XXX is there some way to optimize repeated lookups away? */
+  
+  pkg->depends = (char **)calloc((1+count), sizeof(char **));
+  
+  if (mport_db_prepare(mport->db, &stmt, "SELECT depend_pkgname FROM depends WHERE pkg=%Q", pkg->name) != MPORT_OK) 
+    RETURN_CURRENT_ERROR;
+
+  while (1) {
+    ret = sqlite3_step(stmt);
+    
+    if (ret == SQLITE_DONE) {
+      break;
+    } else if (ret == SQLITE_ROW) {
+      pkg->depends[i] = strdup(sqlite3_column_text(stmt, 0));
+      i++;
+    } else {
+      sqlite3_finalize(stmt);
+      RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(mport->db));
+    } 
+  } 
+  
+  /* pad the last cell in the array with null */
+  pkg->depends[i] = NULL;
+  
+  sqlite3_finalize(stmt);
+  return MPORT_OK; 
+}  
 
 static int populate_vec_from_stmt(mportPackageMeta ***ref, int len, sqlite3 *db, sqlite3_stmt *stmt)
 { 

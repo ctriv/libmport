@@ -59,6 +59,22 @@ int mport_xsystem(mportInstance *mport, const char *, ...);
 int mport_run_plist_exec(mportInstance *mport, const char *, const char *, const char *);
 
 
+/* Mport Bundle (a file containing packages) */
+typedef struct {
+  struct archive *archive;
+  char *filename;
+  struct links_table *links;
+} mportBundle;
+
+mportBundle* mport_bundle_new(void);
+int mport_bundle_init(mportBundle *, const char *);
+int mport_bundle_finish(mportBundle *);
+int mport_bundle_add_file(mportBundle *, const char *, const char *);
+int mport_bundle_add_entry(mportBundle *, struct archive *, struct archive_entry *);
+
+
+
+
 /* sqlite version compare function */
 void mport_version_cmp_sqlite(sqlite3_context *, int, sqlite3_value **);
 

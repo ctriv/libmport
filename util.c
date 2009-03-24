@@ -48,6 +48,8 @@ mportPackageMeta* mport_packagemeta_new()
 
 void mport_packagemeta_free(mportPackageMeta *pack)
 {
+  int i;
+  
   free(pack->pkg_filename);
   free(pack->name);
   free(pack->version);
@@ -63,14 +65,21 @@ void mport_packagemeta_free(mportPackageMeta *pack)
   free(pack->pkgdeinstall);
   free(pack->pkgmessage);
   
-  if (pack->conflicts != NULL) 
-    free(*(pack->conflicts));
+  i = 0;
+  if (pack->conflicts != NULL)  {
+    while (pack->conflicts[i] != NULL)
+      free(pack->conflicts[i++]);
+  }
 
   free(pack->conflicts);
   
-  if (pack->depends != NULL)
-    free(*(pack->depends));
-
+  i = 0;
+  if (pack->depends != NULL) {
+    while (pack->depends[i] != NULL) {
+      free(pack->depends[i++]);
+    }
+  }
+  
   free(pack->depends);
 
   free(pack);
