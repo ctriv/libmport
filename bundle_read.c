@@ -124,8 +124,7 @@ int mport_bundle_read_extract_metafiles(mportBundleRead *bundle, char **dirnamep
       archive_entry_set_pathname(entry, filepath);
       
       if (mport_bundle_read_extract_next_file(bundle, entry) != MPORT_OK)
-        RETURN_CURRENT_ERROR;
-        
+        RETURN_CURRENT_ERROR;        
     } else {
       /* entry points to the first real file in the bundle, so we 
        * want to hold on to that until next_entry() is called
@@ -147,6 +146,13 @@ int mport_bundle_read_extract_metafiles(mportBundleRead *bundle, char **dirnamep
 int mport_bundle_read_next_entry(mportBundleRead *bundle, struct archive_entry **entryp)
 {
   int ret;
+ 
+  if (bundle->firstreal != NULL) {
+    /* handle the lookahead issue with extracting metafiles */
+    *entryp = bundle->firstreal;
+    bundle->firstreal = NULL;
+    return MPORT_OK;
+  }
   
   while (1) {
     ret = archive_read_next_header(bundle->archive, entryp);
@@ -175,7 +181,7 @@ int mport_bundle_read_next_entry(mportBundleRead *bundle, struct archive_entry *
  /* XXX - should this be implemented as a macro? inline? */
 int mport_bundle_read_extract_next_file(mportBundleRead *bundle, struct archive_entry *entry)
 {
-  if (archive_read_extract(bundle->archive, entry, 0) != ARCHIVE_OK) 
+  if (archive_read_extract(bundle->archive, entry, ARCHIVE_EXTRACT_OWNER|ARCHIVE_EXTRACT_PERM|ARCHIVE_EXTRACT_TIME|ARCHIVE_EXTRACT_ACL|ARCHIVE_EXTRACT_FFLAGS) != ARCHIVE_OK) 
     RETURN_ERROR(MPORT_ERR_ARCHIVE, archive_error_string(bundle->archive));
   
   return MPORT_OK;

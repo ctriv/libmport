@@ -41,7 +41,7 @@
 #include <archive_entry.h>
 
 static int do_pre_install(mportInstance *, mportPackageMeta *, const char *);
-static int do_actual_install(mportInstance *, struct archive *, struct archive_entry *, mportPackageMeta *, const char *);
+static int do_actual_install(mportInstance *, mportBundleRead *, mportPackageMeta *, const char *);
 static int do_post_install(mportInstance *, mportPackageMeta *, const char *);
 static int run_pkg_install(mportInstance *, const char *, mportPackageMeta *, const char *);
 static int run_mtree(mportInstance *, const char *, mportPackageMeta *);
@@ -56,39 +56,22 @@ int mport_install_primative(mportInstance *mport, const char *filename, const ch
    * extract the real files inplace.  There's huge IO overhead with having a stagging
    * area. 
    */
-  struct archive *a = archive_read_new();
-  struct archive_entry *entry;
-  char filepath[FILENAME_MAX];
-  const char *file;
+  mportBundleRead *bundle;
+  char *tmpdir;
   sqlite3 *db = mport->db;
   mportPackageMeta **packs;
   mportPackageMeta *pack;
   int i;
   
+  if ((bundle = mport_bundle_read_new()) == NULL)
+    return MPORT_ERR_NO_MEM;
+    
+  if (mport_bundle_read_init(bundle, filename) != MPORT_OK)
+    RETURN_CURRENT_ERROR;
+  
   /* extract the meta-files into the a temp dir */  
-  char dirtmpl[] = "/tmp/mport.XXXXXXXX"; 
-  char *tmpdir = mkdtemp(dirtmpl);
-
-  if (tmpdir == NULL)
-    RETURN_ERROR(MPORT_ERR_FILEIO, strerror(errno));
-    
-  archive_read_support_compression_bzip2(a);
-  archive_read_support_format_tar(a);
-
-  if (archive_read_open_filename(a, filename, 10240) != ARCHIVE_OK)
-    RETURN_ERROR(MPORT_ERR_ARCHIVE, archive_error_string(a));
-    
-  while (archive_read_next_header(a, &entry) == ARCHIVE_OK) {
-    file = archive_entry_pathname(entry);
-    
-    if (*file == '+') {
-      (void)snprintf(filepath, FILENAME_MAX, "%s/%s", tmpdir, file);
-      archive_entry_set_pathname(entry, filepath);
-      archive_read_extract(a, entry, 0);
-    } else {
-      break;
-    }
-  }
+  if (mport_bundle_read_extract_metafiles(bundle, &tmpdir) != MPORT_OK)
+    RETURN_CURRENT_ERROR;  
 
   /* Attach the stub db */
   if (mport_attach_stub_db(db, tmpdir) != MPORT_OK) 
@@ -101,6 +84,7 @@ int mport_install_primative(mportInstance *mport, const char *filename, const ch
   for (i=0; *(packs + i) != NULL; i++) {
     pack  = *(packs + i);    
 
+    /* overwrite the prefix with the one we were given */
     if (prefix != NULL) {
       free(pack->prefix);
       pack->prefix = strdup(prefix);
@@ -114,17 +98,16 @@ int mport_install_primative(mportInstance *mport, const char *filename, const ch
     if (do_pre_install(mport, pack, tmpdir) != MPORT_OK)
       RETURN_CURRENT_ERROR;
 
-    if (do_actual_install(mport, a, entry, pack, tmpdir) != MPORT_OK)
+    if (do_actual_install(mport, bundle, pack, tmpdir) != MPORT_OK)
       RETURN_CURRENT_ERROR;
-    
-    archive_read_finish(a);
     
     if (do_post_install(mport, pack, tmpdir) != MPORT_OK)
       RETURN_CURRENT_ERROR;
   } 
   
   mport_packagemeta_vec_free(packs);
-  
+  mport_bundle_read_finish(bundle);
+    
   if (clean_up(mport, tmpdir) != MPORT_OK)
     RETURN_CURRENT_ERROR;
   
@@ -152,8 +135,7 @@ static int do_pre_install(mportInstance *mport, mportPackageMeta *pack, const ch
 
 static int do_actual_install(
       mportInstance *mport, 
-      struct archive *a, 
-      struct archive_entry *entry,
+      mportBundleRead *bundle,
       mportPackageMeta *pack, 
       const char *tmpdir
     )
@@ -161,6 +143,7 @@ static int do_actual_install(
   int file_total, ret;
   int file_count = 0;
   mportPlistEntryType type;
+  struct archive_entry *entry;
   char *data, *checksum, *orig_cwd; 
   char file[FILENAME_MAX], cwd[FILENAME_MAX], dir[FILENAME_MAX];
   sqlite3_stmt *assets, *count, *insert;
@@ -172,7 +155,7 @@ static int do_actual_install(
   orig_cwd = getcwd(NULL, 0);
 
   /* get the file count for the progress meter */
-  if (mport_db_prepare(db, &count, "SELECT COUNT(*) FROM stub.assets WHERE type=%i", PLIST_FILE) != MPORT_OK)
+  if (mport_db_prepare(db, &count, "SELECT COUNT(*) FROM stub.assets WHERE type=%i AND pkg=%Q", PLIST_FILE, pack->name) != MPORT_OK)
     RETURN_CURRENT_ERROR;
 
   switch (sqlite3_step(count)) {
@@ -237,31 +220,18 @@ static int do_actual_install(
           goto ERROR;
         break;
       case PLIST_FILE:
-        /* Our logic here is a bit backwards, because the first real file
-         * in the archive was read in the loop in mport_install_pkg.  we
-         * use the current entry and then update it. */
-        if (entry == NULL) {
-          SET_ERROR(MPORT_ERR_INTERNAL, "Plist to arhive mismatch!");
-          goto ERROR; 
-        } 
+        if (mport_bundle_read_next_entry(bundle, &entry) != MPORT_OK)
+          goto ERROR;
         
         (void)snprintf(file, FILENAME_MAX, "%s%s/%s", mport->root, cwd, data);
 
         archive_entry_set_pathname(entry, file);
 
-        if (archive_read_extract(a, entry, ARCHIVE_EXTRACT_OWNER|ARCHIVE_EXTRACT_PERM|ARCHIVE_EXTRACT_TIME|ARCHIVE_EXTRACT_ACL|ARCHIVE_EXTRACT_FFLAGS) != ARCHIVE_OK) {
-          SET_ERRORX(MPORT_ERR_ARCHIVE, "Error extracting %s", archive_error_string(a));
+        if (mport_bundle_read_extract_next_file(bundle, entry) != MPORT_OK) 
           goto ERROR;
-        }
         
         (mport->progress_step_cb)(++file_count, file_total, file);
         
-        /* we only look for fatal, because EOF is only an error if we come
-        back around. */
-        if (archive_read_next_header(a, &entry) == ARCHIVE_FATAL) {
-          SET_ERROR(MPORT_ERR_ARCHIVE, archive_error_string(a));
-          goto ERROR;
-        }
         break;
       default:
         /* do nothing */
