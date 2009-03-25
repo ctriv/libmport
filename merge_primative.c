@@ -48,8 +48,8 @@ struct table_entry {
 #define TABLE_SIZE 128
 
 static int build_stub_db(sqlite3 **, const char *, const char *, const char **, struct table_entry **); 
-static int archive_metafiles(mportBundle *, sqlite3 *, struct table_entry **);
-static int archive_package_files(mportBundle *, sqlite3 *, struct table_entry **);
+static int archive_metafiles(mportBundleWrite *, sqlite3 *, struct table_entry **);
+static int archive_package_files(mportBundleWrite *, sqlite3 *, struct table_entry **);
 static int extract_stub_db(const char *, const char *);
 
 static struct table_entry * find_in_table(struct table_entry **, const char *);
@@ -70,7 +70,7 @@ static uint32_t SuperFastHash(const char *);
 int mport_merge_primative(const char **filenames, const char *outfile)
 {
   sqlite3 *db;
-  mportBundle *bundle;
+  mportBundleWrite *bundle;
   struct table_entry **table;
   char tmpdir[] = "/tmp/mport.XXXXXXXX";
   char *dbfile;
@@ -95,11 +95,11 @@ int mport_merge_primative(const char **filenames, const char *outfile)
   
   
   /* set up the bundle, and add our new stub database to it. */
-  if ((bundle = mport_bundle_new()) == NULL)
+  if ((bundle = mport_bundle_write_new()) == NULL)
     RETURN_ERROR(MPORT_ERR_NO_MEM, "Couldn't alloca bundle struct.");
-  if (mport_bundle_init(bundle, outfile) != MPORT_OK)
+  if (mport_bundle_write_init(bundle, outfile) != MPORT_OK)
     RETURN_CURRENT_ERROR;
-  if (mport_bundle_add_file(bundle, dbfile, MPORT_STUB_DB_FILE) != MPORT_OK)
+  if (mport_bundle_write_add_file(bundle, dbfile, MPORT_STUB_DB_FILE) != MPORT_OK)
     RETURN_CURRENT_ERROR;
   
   /* add all the meta files in the correct order */
@@ -241,7 +241,7 @@ static int build_stub_db(sqlite3 **db,  const char *tmpdir,  const char *dbfile,
 }
 
 
-static int archive_metafiles(mportBundle *bundle, sqlite3 *db, struct table_entry **table) 
+static int archive_metafiles(mportBundleWrite *bundle, sqlite3 *db, struct table_entry **table) 
 {
   sqlite3_stmt *stmt;
   int ret, sret;
@@ -300,7 +300,7 @@ static int archive_metafiles(mportBundle *bundle, sqlite3 *db, struct table_entr
         goto DONE;
       } 
       
-      if ((ret = mport_bundle_add_entry(bundle, a, entry)) != MPORT_OK) {
+      if ((ret = mport_bundle_write_add_entry(bundle, a, entry)) != MPORT_OK) {
         archive_read_finish(a);
         goto DONE;
       }
@@ -318,7 +318,7 @@ static int archive_metafiles(mportBundle *bundle, sqlite3 *db, struct table_entr
 
 
 
-static int archive_package_files(mportBundle *bundle, sqlite3 *db, struct table_entry **table)
+static int archive_package_files(mportBundleWrite *bundle, sqlite3 *db, struct table_entry **table)
 {
   sqlite3_stmt *stmt, *files;
   int ret;
@@ -402,7 +402,7 @@ static int archive_package_files(mportBundle *bundle, sqlite3 *db, struct table_
         RETURN_CURRENT_ERROR;
       }
   
-      if (mport_bundle_add_entry(bundle, a, entry) != MPORT_OK) {
+      if (mport_bundle_write_add_entry(bundle, a, entry) != MPORT_OK) {
         archive_read_finish(a);
         sqlite3_finalize(stmt);
         sqlite3_finalize(files);

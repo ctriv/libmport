@@ -49,8 +49,8 @@ static int insert_meta(sqlite3 *, mportPackageMeta *);
 static int insert_depends(sqlite3 *, mportPackageMeta *);
 static int insert_conflicts(sqlite3 *, mportPackageMeta *);
 static int archive_files(mportPlist *, mportPackageMeta *, const char *);
-static int archive_metafiles(mportBundle *, mportPackageMeta *);
-static int archive_plistfiles(mportBundle *, mportPackageMeta *, mportPlist *);
+static int archive_metafiles(mportBundleWrite *, mportPackageMeta *);
+static int archive_plistfiles(mportBundleWrite *, mportPackageMeta *, mportPlist *);
 static int clean_up(const char *);
 
 
@@ -342,17 +342,17 @@ static int insert_depends(sqlite3 *db, mportPackageMeta *pack)
 
 static int archive_files(mportPlist *plist, mportPackageMeta *pack, const char *tmpdir)
 {
-  mportBundle *bundle;
+  mportBundleWrite *bundle;
   char filename[FILENAME_MAX];
   
-  bundle = mport_bundle_new();
+  bundle = mport_bundle_write_new();
   
-  if (mport_bundle_init(bundle, pack->pkg_filename) != MPORT_OK)
+  if (mport_bundle_write_init(bundle, pack->pkg_filename) != MPORT_OK)
     RETURN_CURRENT_ERROR;
 
   /* First step - +CONTENTS.db ALWAYS GOES FIRST!!! */        
   (void)snprintf(filename, FILENAME_MAX, "%s/%s", tmpdir, MPORT_STUB_DB_FILE);
-  if (mport_bundle_add_file(bundle, filename, MPORT_STUB_DB_FILE)) 
+  if (mport_bundle_write_add_file(bundle, filename, MPORT_STUB_DB_FILE)) 
     RETURN_CURRENT_ERROR;
     
   /* second step - the meta files */
@@ -363,13 +363,13 @@ static int archive_files(mportPlist *plist, mportPackageMeta *pack, const char *
   if (archive_plistfiles(bundle, pack, plist) != MPORT_OK)
     RETURN_CURRENT_ERROR;
     
-  mport_bundle_finish(bundle);
+  mport_bundle_write_finish(bundle);
   
   return MPORT_OK;    
 }
 
 
-static int archive_metafiles(mportBundle *bundle, mportPackageMeta *pack)
+static int archive_metafiles(mportBundleWrite *bundle, mportPackageMeta *pack)
 {
   char filename[FILENAME_MAX], dir[FILENAME_MAX];
   
@@ -377,32 +377,32 @@ static int archive_metafiles(mportBundle *bundle, mportPackageMeta *pack)
 
   if (pack->mtree != NULL && mport_file_exists(pack->mtree)) {
     (void)snprintf(filename, FILENAME_MAX, "%s/%s", dir, MPORT_MTREE_FILE);
-    if (mport_bundle_add_file(bundle, pack->mtree, filename) != MPORT_OK)
+    if (mport_bundle_write_add_file(bundle, pack->mtree, filename) != MPORT_OK)
       RETURN_CURRENT_ERROR;
   }
   
   if (pack->pkginstall != NULL && mport_file_exists(pack->pkginstall)) {
     (void)snprintf(filename, FILENAME_MAX, "%s/%s", dir, MPORT_INSTALL_FILE);
-    if (mport_bundle_add_file(bundle, pack->pkginstall, filename) != MPORT_OK)
+    if (mport_bundle_write_add_file(bundle, pack->pkginstall, filename) != MPORT_OK)
       RETURN_CURRENT_ERROR;
   }
   
   if (pack->pkgdeinstall != NULL && mport_file_exists(pack->pkgdeinstall)) {
     (void)snprintf(filename, FILENAME_MAX, "%s/%s", dir, MPORT_DEINSTALL_FILE);
-    if (mport_bundle_add_file(bundle, pack->pkgdeinstall, filename) != MPORT_OK)
+    if (mport_bundle_write_add_file(bundle, pack->pkgdeinstall, filename) != MPORT_OK)
       RETURN_CURRENT_ERROR;
   }
   
   if (pack->pkgmessage != NULL && mport_file_exists(pack->pkgmessage)) {
     (void)snprintf(filename, FILENAME_MAX, "%s/%s", dir, MPORT_MESSAGE_FILE);
-    if (mport_bundle_add_file(bundle, pack->pkgmessage, filename) != MPORT_OK)
+    if (mport_bundle_write_add_file(bundle, pack->pkgmessage, filename) != MPORT_OK)
       RETURN_CURRENT_ERROR;
   }
   
   return MPORT_OK;
 }
 
-static int archive_plistfiles(mportBundle *bundle, mportPackageMeta *pack, mportPlist *plist)
+static int archive_plistfiles(mportBundleWrite *bundle, mportPackageMeta *pack, mportPlist *plist)
 {
   mportPlistEntry *e;
   char filename[FILENAME_MAX];
@@ -418,7 +418,7 @@ static int archive_plistfiles(mportBundle *bundle, mportPackageMeta *pack, mport
     
     (void)snprintf(filename, FILENAME_MAX, "%s/%s/%s", pack->sourcedir, cwd, e->data);
     
-    if (mport_bundle_add_file(bundle, filename, e->data) != MPORT_OK)
+    if (mport_bundle_write_add_file(bundle, filename, e->data) != MPORT_OK)
       RETURN_CURRENT_ERROR;
   }    
  

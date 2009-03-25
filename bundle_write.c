@@ -65,33 +65,35 @@ struct link_node {
 };
 
 
-static int lookup_hardlink(mportBundle *, struct archive_entry *, const struct stat *);
+static int lookup_hardlink(mportBundleWrite *, struct archive_entry *, const struct stat *);
 static void free_linktable(struct links_table *);
 
 /* 
- * mport_new_bundle() 
+ * mport_bundle_write_new() 
  *
- * allocate a new bundle struct.  Returns null if no
+ * allocate a new write bundle struct.  Returns null if no
  * memory could be had 
  */
-mportBundle* mport_bundle_new() 
+mportBundleWrite* mport_bundle_write_new() 
 {
-  return (mportBundle *)malloc(sizeof(mportBundle));
+  return (mportBundleWrite *)malloc(sizeof(mportBundleWrite));
 }
  
 
 /*
- * mport_init_bundle(filename)
+ * mport_bundle_write_init(bundle, filename)
  * 
  * set up an bundle for adding files.  Sets the bundle file to
  * filename.
  */
-int mport_bundle_init(mportBundle *bundle, const char *filename)
+int mport_bundle_write_init(mportBundleWrite *bundle, const char *filename)
 {
   if ((bundle->filename = strdup(filename)) == NULL)
     RETURN_ERROR(MPORT_ERR_NO_MEM, "Couldn't dup filename");
    
-  bundle->archive = archive_write_new();
+  if ((bundle->archive = archive_write_new()) == NULL) 
+    RETURN_ERROR(MPORT_ERR_NO_MEM, "Couldn't allocate archive struct");
+
   archive_write_set_compression_bzip2(bundle->archive);
   archive_write_set_format_pax(bundle->archive);
 
@@ -105,12 +107,12 @@ int mport_bundle_init(mportBundle *bundle, const char *filename)
 }
 
 /* 
- * mport_finish_bundle(bundle)
+ * mport_bundle_write_finish(bundle)
  *
  * Finish the bundle file, and then free any memory used by the mportBundle struct.
  *
  */
-int mport_bundle_finish(mportBundle *bundle)
+int mport_bundle_write_finish(mportBundleWrite *bundle)
 {
   int ret = MPORT_OK;
   
@@ -126,12 +128,12 @@ int mport_bundle_finish(mportBundle *bundle)
 
 
 /*
- * mport_add_file_to_bundle(bundle, filename, path)
+ * mport_bundle_write_add_file(bundle, filename, path)
  *
  * Add a single file to the bundle.  filename is the name of the file
  * in the system, while path is where the file should be put in the bundle.
  */
-int mport_bundle_add_file(mportBundle *bundle, const char *filename, const char *path) 
+int mport_bundle_write_add_file(mportBundleWrite *bundle, const char *filename, const char *path) 
 {
   struct archive_entry *entry;
   struct stat st;
@@ -202,12 +204,12 @@ int mport_bundle_add_file(mportBundle *bundle, const char *filename, const char 
 }
 
 
-/* mport_bundle_add_entry(bundle, archive, entry)
+/* mport_bundle_write_add_entry(bundle, archive, entry)
  * 
  * Add an entry from another archive to the bundle.  The archive struct must be a read 
  * archive, and the entry must represent the current data segment of the archive.
  */
-int mport_bundle_add_entry(mportBundle *bundle, struct archive *a, struct archive_entry *entry)
+int mport_bundle_write_add_entry(mportBundleWrite *bundle, struct archive *a, struct archive_entry *entry)
 {
   char buff[BUFF_SIZE];
   size_t size, bytes_to_write;
@@ -238,7 +240,7 @@ int mport_bundle_add_entry(mportBundle *bundle, struct archive *a, struct archiv
  * for the inode in the table, mark this incoming file as a hardlink to the prior file.
  * otherwise insert the new file into the table
  */
-static int lookup_hardlink(mportBundle *bundle, struct archive_entry *entry, const struct stat *st)
+static int lookup_hardlink(mportBundleWrite *bundle, struct archive_entry *entry, const struct stat *st)
 {
   struct links_table *links = bundle->links;
   struct link_node *node, **new_buckets;
