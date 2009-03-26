@@ -221,6 +221,7 @@ static int build_stub_db(sqlite3 **db,  const char *tmpdir,  const char *dbfile,
   
   if (mport_db_prepare(*db, &stmt, "SELECT COUNT(DISTINCT pkg) FROM unsorted"))
     RETURN_CURRENT_ERROR;  
+    
   if (sqlite3_step(stmt) != SQLITE_ROW) {
     SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(*db));
     sqlite3_finalize(stmt);
@@ -252,7 +253,7 @@ static int archive_metafiles(mportBundleWrite *bundle, sqlite3 *db, struct table
   int ret, sret;
   char *filename, *pkgname;
   struct table_entry *match = NULL;
-  struct archive *a = NULL;
+  mportBundleRead *inbundle= NULL;
   struct archive_entry *entry;
   
   ret = MPORT_OK;
@@ -281,34 +282,33 @@ static int archive_metafiles(mportBundleWrite *bundle, sqlite3 *db, struct table
     
     filename = match->file;
     
-    a = archive_read_new();
-    archive_read_support_format_tar(a);
-    archive_read_support_compression_bzip2(a);
+    if ((inbundle = mport_bundle_read_new()) == NULL) {
+      SET_ERROR(MPORT_ERR_NO_MEM, "Couldn't allocate bundle");
+      goto DONE;
+    }
+
     
-    if (archive_read_open_filename(a, filename, 10240) != MPORT_OK) {
-      archive_read_finish(a);
-      ret = SET_ERRORX(MPORT_ERR_ARCHIVE, "Unable to open %s: %s", filename, archive_error_string(a));
+    if (mport_bundle_read_init(inbundle, filename) != MPORT_OK) {
+      mport_bundle_read_finish(inbundle);
       goto DONE;
     }
 
     
     /* skip the sub db */
-    if (archive_read_next_header(a, &entry) != ARCHIVE_OK) {
-      archive_read_finish(a);
-      ret = SET_ERRORX(MPORT_ERR_ARCHIVE, "Unable to read %s: %s", filename, archive_error_string(a));
+    if (mport_bundle_read_next_entry(inbundle, &entry) != MPORT_OK) {
+      mport_bundle_read_finish(inbundle);
       goto DONE;
     }
-    if (archive_read_data_skip(a) != ARCHIVE_OK) {
-      archive_read_finish(a);
-      ret = SET_ERRORX(MPORT_ERR_ARCHIVE, "Unable to read %s: %s", filename, archive_error_string(a));
+    if (archive_read_data_skip(inbundle->archive) != ARCHIVE_OK) {
+      mport_bundle_read_finish(inbundle);
+      ret = SET_ERRORX(MPORT_ERR_ARCHIVE, "Unable to read %s: %s", filename, archive_error_string(inbundle->archive));
       goto DONE;
     }
     
     
     while (1) {
-      if (archive_read_next_header(a, &entry) != ARCHIVE_OK) {
-        archive_read_finish(a);
-        ret = SET_ERRORX(MPORT_ERR_ARCHIVE, "Unable to read %s: %s", filename, archive_error_string(a));
+      if (mport_bundle_read_next_entry(inbundle, &entry) != MPORT_OK) {
+        mport_bundle_read_finish(inbundle);
         goto DONE;
       } 
       
@@ -317,15 +317,14 @@ static int archive_metafiles(mportBundleWrite *bundle, sqlite3 *db, struct table
       
       warnx("Adding %s", archive_entry_pathname(entry));
       
-      if ((ret = mport_bundle_write_add_entry(bundle, a, entry)) != MPORT_OK) {
+      if ((ret = mport_bundle_write_add_entry(bundle, inbundle, entry)) != MPORT_OK) {
         warnx("bundle add entry failed");
-        archive_read_finish(a);
+        mport_bundle_read_finish(inbundle);
         goto DONE;
       }
     }
-    
-    archive_read_finish(a);
-    
+
+    mport_bundle_read_finish(inbundle);    
   }
   
   DONE:
@@ -341,7 +340,7 @@ static int archive_package_files(mportBundleWrite *bundle, sqlite3 *db, struct t
   int ret;
   struct table_entry *cur;
   char *pkgname, *file;
-  struct archive *a;
+  mportBundleRead *inbundle;
   struct archive_entry *entry;
   
   if (mport_db_prepare(db, &stmt, "SELECT pkg FROM packages") != MPORT_OK)
@@ -369,35 +368,23 @@ static int archive_package_files(mportBundleWrite *bundle, sqlite3 *db, struct t
     
     file = cur->file;
         
-    /* open the tar file, copy the files into the current bundle */
-    a = archive_read_new();
+    if ((inbundle = mport_bundle_read_new()) == NULL)
+      return MPORT_ERR_NO_MEM;
+        
     
-    if (a == NULL)
-      RETURN_ERROR(MPORT_ERR_ARCHIVE, "Couldn't allocate read archive struct");
-    
-    archive_read_support_format_tar(a);
-    archive_read_support_compression_bzip2(a);
-      
-    if (archive_read_open_filename(a, file, 10240) != ARCHIVE_OK) {
-      archive_read_finish(a);
-      sqlite3_finalize(stmt);
-      RETURN_ERROR(MPORT_ERR_ARCHIVE, archive_error_string(a));
+    if (mport_bundle_read_init(inbundle, file) != MPORT_OK) {
+      mport_bundle_read_finish(inbundle);
+      RETURN_CURRENT_ERROR;
     }
     
-    
-    while (1) {
-      if (archive_read_next_header(a, &entry) != ARCHIVE_OK) {
-        ret = SET_ERRORX(MPORT_ERR_ARCHIVE, "Unable to read %s: %s", file, archive_error_string(a));
-        archive_read_finish(a);
-        sqlite3_finalize(stmt);
-        RETURN_CURRENT_ERROR;
-      }
-      
-      /******  UGGHHH *****  gotta skip the metafiles, but have things at the right spot for reading, bundle_read? */)
-    }  
-  
+    if (mport_bundle_read_skip_metafiles(inbundle) != MPORT_OK) {
+      mport_bundle_read_finish(inbundle);
+      sqlite3_finalize(stmt);
+      RETURN_CURRENT_ERROR;
+    }
+
     if (mport_db_prepare(db, &files, "SELECT data FROM assets WHERE pkg=%Q AND type=%i", pkgname, PLIST_FILE) != MPORT_OK) {
-      archive_read_finish(a);
+      mport_bundle_read_finish(inbundle);
       sqlite3_finalize(stmt);
       RETURN_CURRENT_ERROR;
     }
@@ -412,15 +399,14 @@ static int archive_package_files(mportBundleWrite *bundle, sqlite3 *db, struct t
         SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
         sqlite3_finalize(stmt);
         sqlite3_finalize(files);
-        archive_read_finish(a);
+        mport_bundle_read_finish(inbundle);
         RETURN_CURRENT_ERROR;
       }
       
       file = (char *)sqlite3_column_text(files, 0);
       
-      if (archive_read_next_header(a, &entry) != ARCHIVE_OK) {
-        archive_read_finish(a);
-        ret = SET_ERRORX(MPORT_ERR_ARCHIVE, "Unable to read %s: %s", file, archive_error_string(a));
+      if (mport_bundle_read_next_entry(inbundle, &entry) != MPORT_OK) {
+        mport_bundle_read_finish(inbundle);
         sqlite3_finalize(stmt);
         sqlite3_finalize(files);
         RETURN_CURRENT_ERROR;
@@ -428,14 +414,14 @@ static int archive_package_files(mportBundleWrite *bundle, sqlite3 *db, struct t
       
       if (strcmp(file, archive_entry_pathname(entry)) != 0) {
         SET_ERRORX(MPORT_ERR_INTERNAL, "Plist to archive mismatch in package %s: found '%s', expected '%s'", pkgname, archive_entry_pathname(entry), file);
-        archive_read_finish(a);
+        mport_bundle_read_finish(inbundle);
         sqlite3_finalize(stmt);
         sqlite3_finalize(files);
         RETURN_CURRENT_ERROR;
       }
   
-      if (mport_bundle_write_add_entry(bundle, a, entry) != MPORT_OK) {
-        archive_read_finish(a);
+      if (mport_bundle_write_add_entry(bundle, inbundle, entry) != MPORT_OK) {
+        mport_bundle_read_finish(inbundle);
         sqlite3_finalize(stmt);
         sqlite3_finalize(files);
         RETURN_CURRENT_ERROR;
@@ -444,7 +430,7 @@ static int archive_package_files(mportBundleWrite *bundle, sqlite3 *db, struct t
   
     /* we're done with this package, onto the next one */
     sqlite3_finalize(files);
-    archive_read_finish(a);
+    mport_bundle_read_finish(inbundle);
   } 
   
   sqlite3_finalize(stmt);

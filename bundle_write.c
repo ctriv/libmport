@@ -204,12 +204,12 @@ int mport_bundle_write_add_file(mportBundleWrite *bundle, const char *filename, 
 }
 
 
-/* mport_bundle_write_add_entry(bundle, archive, entry)
+/* mport_bundle_write_add_entry(bundle, readBundle, entry)
  * 
  * Add an entry from another archive to the bundle.  The archive struct must be a read 
  * archive, and the entry must represent the current data segment of the archive.
  */
-int mport_bundle_write_add_entry(mportBundleWrite *bundle, struct archive *a, struct archive_entry *entry)
+int mport_bundle_write_add_entry(mportBundleWrite *bundle, mportBundleRead *inbundle, struct archive_entry *entry)
 {
   char buff[BUFF_SIZE];
   size_t size, bytes_to_write;
@@ -220,8 +220,8 @@ int mport_bundle_write_add_entry(mportBundleWrite *bundle, struct archive *a, st
   size = archive_entry_size(entry);
 
   while (size > 0) {  
-    if (archive_read_data(a, buff, sizeof(buff)) < ARCHIVE_OK) 
-      RETURN_ERROR(MPORT_ERR_ARCHIVE, archive_error_string(a));
+    if (archive_read_data(inbundle->archive, buff, sizeof(buff)) < ARCHIVE_OK) 
+      RETURN_ERROR(MPORT_ERR_ARCHIVE, archive_error_string(inbundle->archive));
 
     /* don't write the whole buffer if it isn't full */
     bytes_to_write = size < sizeof(buff) ? size : sizeof(buff);

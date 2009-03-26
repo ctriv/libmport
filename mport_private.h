@@ -66,17 +66,20 @@ typedef struct {
   struct links_table *links;
 } mportBundleWrite;
 
-mportBundleWrite* mport_bundle_write_new(void);
-int mport_bundle_write_init(mportBundleWrite *, const char *);
-int mport_bundle_write_finish(mportBundleWrite *);
-int mport_bundle_write_add_file(mportBundleWrite *, const char *, const char *);
-int mport_bundle_write_add_entry(mportBundleWrite *, struct archive *, struct archive_entry *);
 
 typedef struct {
   struct archive *archive;
   char *filename;
   struct archive_entry *firstreal;
 } mportBundleRead;
+
+
+mportBundleWrite* mport_bundle_write_new(void);
+int mport_bundle_write_init(mportBundleWrite *, const char *);
+int mport_bundle_write_finish(mportBundleWrite *);
+int mport_bundle_write_add_file(mportBundleWrite *, const char *, const char *);
+int mport_bundle_write_add_entry(mportBundleWrite *, mportBundleRead *, struct archive_entry *);
+
 
 mportBundleRead* mport_bundle_read_new(void);
 int mport_bundle_read_init(mportBundleRead *, const char *);
