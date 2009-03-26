@@ -123,6 +123,9 @@ static int insert_plist(sqlite3 *db, mportPlist *plist, mportPackageMeta *pack)
     RETURN_CURRENT_ERROR;
   
   STAILQ_FOREACH(e, plist, next) {
+    if (e->type == PLIST_COMMENT)
+      continue;
+  
     if (e->type == PLIST_CWD) {
       strlcpy(cwd, pack->sourcedir, FILENAME_MAX);
       if (e->data == NULL) {

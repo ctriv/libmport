@@ -218,9 +218,9 @@ int mport_bundle_write_add_entry(mportBundleWrite *bundle, struct archive *a, st
     RETURN_ERROR(MPORT_ERR_ARCHIVE, archive_error_string(bundle->archive));
 
   size = archive_entry_size(entry);
-  
+
   while (size > 0) {  
-    if (archive_read_data(a, buff, sizeof(buff)) != ARCHIVE_OK) 
+    if (archive_read_data(a, buff, sizeof(buff)) < ARCHIVE_OK) 
       RETURN_ERROR(MPORT_ERR_ARCHIVE, archive_error_string(a));
 
     /* don't write the whole buffer if it isn't full */
@@ -228,7 +228,7 @@ int mport_bundle_write_add_entry(mportBundleWrite *bundle, struct archive *a, st
 
     if (archive_write_data(bundle->archive, buff, bytes_to_write) < 0)
       RETURN_ERROR(MPORT_ERR_ARCHIVE, archive_error_string(bundle->archive));
-        
+
     size -= bytes_to_write;
   }  
   

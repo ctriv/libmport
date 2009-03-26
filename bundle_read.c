@@ -62,6 +62,9 @@ int mport_bundle_read_init(mportBundleRead *bundle, const char *filename)
   
   bundle->firstreal = NULL;
   
+  archive_read_support_format_tar(bundle->archive);
+  archive_read_support_compression_bzip2(bundle->archive);
+  
   if (archive_read_open_filename(bundle->archive, bundle->filename, 10240) != ARCHIVE_OK) {
     RETURN_ERROR(MPORT_ERR_ARCHIVE, archive_error_string(bundle->archive));
   }
@@ -136,6 +139,30 @@ int mport_bundle_read_extract_metafiles(mportBundleRead *bundle, char **dirnamep
  
   return MPORT_OK;                 
 } 
+
+
+/*
+ * mport_bundle_read_skip_metafiles(bundle)
+ *
+ * Skip all the metafiles, leaving the bundle ready for reading datafiles.
+ */
+ 
+int mport_bundle_read_skip_metafiles(mportBundleRead *bundle) 
+{
+  struct archive_entry *entry;
+  
+  while (1) {
+    if (mport_bundle_read_next_entry(bundle, &entry) != MPORT_OK)
+      RETURN_CURRENT_ERROR;
+    
+    if (*(archive_entry_pathname(entry)) != '+') {
+      bundle->firstreal = entry;
+      break;
+    }
+  }
+  
+  return MPORT_OK;
+}    
 
 
 /*
