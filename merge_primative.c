@@ -113,6 +113,11 @@ int mport_merge_primative(const char **filenames, const char *outfile)
   /* add all the other files */     
   if (archive_package_files(bundle, db, table) != MPORT_OK)
     RETURN_CURRENT_ERROR;
+
+  warnx("Realfiles complete");
+  
+  if (mport_bundle_write_finish(bundle) != MPORT_OK)
+    RETURN_CURRENT_ERROR;
  
  /*if (mport_rmtree(tmpdir) != MPORT_OK)
    RETURN_CURRENT_ERROR; */
@@ -200,6 +205,7 @@ static int build_stub_db(sqlite3 **db,  const char *tmpdir,  const char *dbfile,
   }
 
   /* just have to sort the packages (going from unsorted to packages), no big deal... ;) */
+   /* XXXXXX this does not work correctly if there are outside depends. */
   while (1) {
     if (mport_db_do(*db, "INSERT INTO packages SELECT * FROM unsorted WHERE NOT EXISTS (SELECT 1 FROM packages WHERE packages.pkg=unsorted.pkg) AND (NOT EXISTS (SELECT 1 FROM depends WHERE depends.pkg=unsorted.pkg) OR NOT EXISTS (SELECT 1 FROM depends LEFT JOIN packages ON depends.depend_pkgname=packages.pkg WHERE depends.pkg=unsorted.pkg AND packages.pkg ISNULL))") != MPORT_OK)
       RETURN_CURRENT_ERROR;
@@ -419,6 +425,8 @@ static int archive_package_files(mportBundleWrite *bundle, sqlite3 *db, struct t
         sqlite3_finalize(files);
         RETURN_CURRENT_ERROR;
       }
+
+      warnx("Adding realfile: %s", archive_entry_pathname(entry));
   
       if (mport_bundle_write_add_entry(bundle, inbundle, entry) != MPORT_OK) {
         mport_bundle_read_finish(inbundle);
