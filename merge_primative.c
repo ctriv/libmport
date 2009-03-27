@@ -78,20 +78,20 @@ int mport_merge_primative(const char **filenames, const char *outfile)
   if ((table = (struct table_entry **)calloc(TABLE_SIZE, sizeof(struct table_entry *))) == NULL)
     RETURN_ERROR(MPORT_ERR_NO_MEM, "Couldn't allocate hash table.");
   
-  warnx("mport_merge_primative(%p, %s)", filenames, outfile);
+  DIAG("mport_merge_primative(%p, %s)", filenames, outfile)
   
   if (mkdtemp(tmpdir) == NULL)
     RETURN_ERROR(MPORT_ERR_FILEIO, "Couldn't make temp directory.");
   if (asprintf(&dbfile, "%s/%s", tmpdir, "merged.db") == -1)
     RETURN_ERROR(MPORT_ERR_NO_MEM, "Couldn't build merge database name.");
   
-  warnx("Building stub");
+  DIAG("Building stub")
 
   /* this function merges the stub databases into one db. */      
   if (build_stub_db(&db, tmpdir, dbfile, filenames, table) != MPORT_OK)
     RETURN_CURRENT_ERROR;
   
-  warnx("Stub complete: %s", dbfile);
+  DIAG("Stub complete: %s", dbfile)
     
   /* set up the bundle, and add our new stub database to it. */
   if ((bundle = mport_bundle_write_new()) == NULL)
@@ -99,22 +99,22 @@ int mport_merge_primative(const char **filenames, const char *outfile)
   if (mport_bundle_write_init(bundle, outfile) != MPORT_OK)
     RETURN_CURRENT_ERROR;
    
-  warnx("Adding %s", dbfile); 
+  DIAG("Adding %s", dbfile)
     
   if (mport_bundle_write_add_file(bundle, dbfile, MPORT_STUB_DB_FILE) != MPORT_OK)
     RETURN_CURRENT_ERROR;
   
-  warnx("Adding metafiles");
+  DIAG("Adding metafiles")
   /* add all the meta files in the correct order */
   if (archive_metafiles(bundle, db, table) != MPORT_OK)
     RETURN_CURRENT_ERROR;
 
-  warnx("Adding realfiles");
+  DIAG("Adding realfiles")
   /* add all the other files */     
   if (archive_package_files(bundle, db, table) != MPORT_OK)
     RETURN_CURRENT_ERROR;
 
-  warnx("Realfiles complete");
+  DIAG("Realfiles complete")
   
   if (mport_bundle_write_finish(bundle) != MPORT_OK)
     RETURN_CURRENT_ERROR;
@@ -148,7 +148,7 @@ static int build_stub_db(sqlite3 **db,  const char *tmpdir,  const char *dbfile,
     RETURN_CURRENT_ERROR;
     
   for (file = *filenames; file != NULL; file = *(++filenames)) {
-    warnx("Visiting %s", file);
+    DIAG("Visiting %s", file)
     if (extract_stub_db(file, tmpdbfile) != MPORT_OK)
       RETURN_CURRENT_ERROR;
 
@@ -207,7 +207,7 @@ static int build_stub_db(sqlite3 **db,  const char *tmpdir,  const char *dbfile,
   /* just have to sort the packages (going from unsorted to packages), no big deal... ;) */
    /* XXXXXX this does not work correctly if there are outside depends. */
   while (1) {
-    if (mport_db_do(*db, "INSERT INTO packages SELECT * FROM unsorted WHERE NOT EXISTS (SELECT 1 FROM packages WHERE packages.pkg=unsorted.pkg) AND (NOT EXISTS (SELECT 1 FROM depends WHERE depends.pkg=unsorted.pkg) OR NOT EXISTS (SELECT 1 FROM depends LEFT JOIN packages ON depends.depend_pkgname=packages.pkg WHERE depends.pkg=unsorted.pkg AND EXISTS (SELECT 1 FROM unsorter AS us2 WHERE us2.pkg=depend_pkgname) AND packages.pkg ISNULL))") != MPORT_OK)
+    if (mport_db_do(*db, "INSERT INTO packages SELECT * FROM unsorted WHERE NOT EXISTS (SELECT 1 FROM packages WHERE packages.pkg=unsorted.pkg) AND (NOT EXISTS (SELECT 1 FROM depends WHERE depends.pkg=unsorted.pkg) OR NOT EXISTS (SELECT 1 FROM depends LEFT JOIN packages ON depends.depend_pkgname=packages.pkg WHERE depends.pkg=unsorted.pkg AND EXISTS (SELECT 1 FROM unsorted AS us2 WHERE us2.pkg=depend_pkgname) AND packages.pkg ISNULL))") != MPORT_OK)
       RETURN_CURRENT_ERROR;
     if (sqlite3_changes(*db) == 0) /* if there is nothing left to insert, we're done */
       break;
@@ -321,10 +321,10 @@ static int archive_metafiles(mportBundleWrite *bundle, sqlite3 *db, struct table
       if (*(archive_entry_pathname(entry)) != '+')
         break;
       
-      warnx("Adding %s", archive_entry_pathname(entry));
+      DIAG("Adding %s", archive_entry_pathname(entry))
       
       if ((ret = mport_bundle_write_add_entry(bundle, inbundle, entry)) != MPORT_OK) {
-        warnx("bundle add entry failed");
+        DIAG("bundle add entry failed")
         mport_bundle_read_finish(inbundle);
         goto DONE;
       }
@@ -426,7 +426,7 @@ static int archive_package_files(mportBundleWrite *bundle, sqlite3 *db, struct t
         RETURN_CURRENT_ERROR;
       }
 
-      warnx("Adding realfile: %s", archive_entry_pathname(entry));
+      DIAG("Adding realfile: %s", archive_entry_pathname(entry));
   
       if (mport_bundle_write_add_entry(bundle, inbundle, entry) != MPORT_OK) {
         mport_bundle_read_finish(inbundle);

@@ -34,7 +34,7 @@
 #include <stdarg.h>
 
 
-static int err;
+static int mport_err;
 static char err_msg[256];
 
 /* This goes with the error codes in mport.h */
@@ -60,7 +60,7 @@ static char *mport_err_defaults[] = {
 
 int mport_err_code() 
 {
-  return err;
+  return mport_err;
 }
 
 const char * mport_err_string()
@@ -70,7 +70,7 @@ const char * mport_err_string()
 
 int mport_set_err(int code, const char *msg) 
 {
-  err = code;
+  mport_err = code;
   if (msg != NULL) {
     strlcpy(err_msg, msg, sizeof(err_msg));
   } else {

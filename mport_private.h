@@ -29,6 +29,14 @@
 #ifndef _MPORT_PRIV_H_
 #define _MPORT_PRIV_H_
 
+#ifdef DEBUGGING
+#include <err.h>
+#define DIAG(fmt, ...) warnx(fmt, ## __VA_ARGS__);
+#else
+#define DIAG(...) 
+#endif
+
+
 /* callback syntaxtic sugar */
 void mport_call_msg_cb(mportInstance *, const char *, ...);
 

@@ -9,7 +9,7 @@ SRCS=		bundle_write.c bundle_read.c plist.c create_primative.c db.c util.c error
 INCS=		mport.h
 
 
-CFLAGS+=	-I${.CURDIR}
+CFLAGS+=	-I${.CURDIR} -DDEBUGGING
 WARNS?=	3
 WFORMAT?=	1
 SHLIB_MAJOR=	1
