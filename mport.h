@@ -69,34 +69,31 @@ void mport_default_progress_init_cb(void);
 void mport_default_progress_step_cb(int, int, const char *);
 void mport_default_progress_free_cb(void);
 
-
-
-
 /* For now this is just the FreeBSD list, this will change soon. */
-enum _PlistEntryType { 
-  PLIST_INVALID, PLIST_FILE, PLIST_CWD, PLIST_CHMOD, PLIST_CHOWN, PLIST_CHGRP,
-  PLIST_COMMENT, PLIST_IGNORE, PLIST_NAME, PLIST_EXEC, PLIST_UNEXEC,
-  PLIST_SRC, PLIST_DISPLY, PLIST_PKGDEP, PLIST_CONFLICTS, PLIST_MTREE,
-  PLIST_DIRRM, PLIST_DIRRMTRY, PLIST_IGNORE_INST, PLIST_OPTION, PLIST_ORIGIN,
-  PLIST_DEPORIGIN, PLIST_NOINST, PLIST_DISPLAY
+enum _AssetListEntryType { 
+  ASSET_INVALID, ASSET_FILE, ASSET_CWD, ASSET_CHMOD, ASSET_CHOWN, ASSET_CHGRP,
+  ASSET_COMMENT, ASSET_IGNORE, ASSET_NAME, ASSET_EXEC, ASSET_UNEXEC,
+  ASSET_SRC, ASSET_DISPLY, ASSET_PKGDEP, ASSET_CONFLICTS, ASSET_MTREE,
+  ASSET_DIRRM, ASSET_DIRRMTRY, ASSET_IGNORE_INST, ASSET_OPTION, ASSET_ORIGIN,
+  ASSET_DEPORIGIN, ASSET_NOINST, ASSET_DISPLAY
 };
 
-typedef enum _PlistEntryType mportPlistEntryType;
+typedef enum _AssetListEntryType mportAssetListEntryType;
 
-struct _PlistEntry {
-  mportPlistEntryType type;
+struct _AssetListEntry {
+  mportAssetListEntryType type;
   char *data;
-  STAILQ_ENTRY(_PlistEntry) next;
+  STAILQ_ENTRY(_AssetListEntry) next;
 };
 
-STAILQ_HEAD(_Plist, _PlistEntry);
+STAILQ_HEAD(_AssetList, _AssetListEntry);
 
-typedef struct _Plist mportPlist;
-typedef struct _PlistEntry mportPlistEntry;
+typedef struct _AssetList mportAssetList;
+typedef struct _AssetListEntry mportAssetListEntry;
 
-mportPlist* mport_plist_new(void);
-void mport_plist_free(mportPlist *);
-int mport_plist_parsefile(FILE *, mportPlist *);
+mportAssetList* mport_assetlist_new(void);
+void mport_assetlist_free(mportAssetList *);
+int mport_parse_plistfile(FILE *, mportAssetList *);
 
 /* Package Meta-data structure */
 
@@ -125,7 +122,7 @@ void mport_packagemeta_vec_free(mportPackageMeta **);
 
 
 /* Package creation */
-int mport_create_primative(mportPlist *, mportPackageMeta *);
+int mport_create_primative(mportAssetList *, mportPackageMeta *);
 
 /* Merge primative */
 int mport_merge_primative(const char **, const char *);

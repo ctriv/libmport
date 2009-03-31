@@ -389,7 +389,7 @@ static int archive_package_files(mportBundleWrite *bundle, sqlite3 *db, struct t
       RETURN_CURRENT_ERROR;
     }
 
-    if (mport_db_prepare(db, &files, "SELECT data FROM assets WHERE pkg=%Q AND type=%i", pkgname, PLIST_FILE) != MPORT_OK) {
+    if (mport_db_prepare(db, &files, "SELECT data FROM assets WHERE pkg=%Q AND type=%i", pkgname, ASSET_FILE) != MPORT_OK) {
       mport_bundle_read_finish(inbundle);
       sqlite3_finalize(stmt);
       RETURN_CURRENT_ERROR;

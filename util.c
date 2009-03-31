@@ -281,7 +281,7 @@ void mport_parselist(char *opt, char ***list)
 }
 
 /*
- * mport_run_plist_exec(fmt, cwd, last_file)
+ * mport_run_asset_exec(fmt, cwd, last_file)
  * 
  * handles a @exec or a @unexec directive in a plist.  This function
  * does the substitions and then runs the command.  last_file is 
@@ -293,7 +293,7 @@ void mport_parselist(char *opt, char ***list)
  * %B	Return the directory part ("dirname") of %D/%F
  * %f	Return the filename part of ("basename") %D/%F
  */
-int mport_run_plist_exec(mportInstance *mport, const char *fmt, const char *cwd, const char *last_file) 
+int mport_run_asset_exec(mportInstance *mport, const char *fmt, const char *cwd, const char *last_file) 
 {
   size_t l;
   size_t max = FILENAME_MAX * 2;

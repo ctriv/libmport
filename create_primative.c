@@ -44,17 +44,17 @@
 #include "mport_private.h"
 
 static int create_stub_db(sqlite3 **);
-static int insert_plist(sqlite3 *, mportPlist *, mportPackageMeta *);
+static int insert_assetlist(sqlite3 *, mportAssetList *, mportPackageMeta *);
 static int insert_meta(sqlite3 *, mportPackageMeta *);
 static int insert_depends(sqlite3 *, mportPackageMeta *);
 static int insert_conflicts(sqlite3 *, mportPackageMeta *);
-static int archive_files(mportPlist *, mportPackageMeta *, const char *);
+static int archive_files(mportAssetList *, mportPackageMeta *, const char *);
 static int archive_metafiles(mportBundleWrite *, mportPackageMeta *);
-static int archive_plistfiles(mportBundleWrite *, mportPackageMeta *, mportPlist *);
+static int archive_assetlistfiles(mportBundleWrite *, mportPackageMeta *, mportAssetList *);
 static int clean_up(const char *);
 
 
-int mport_create_primative(mportPlist *plist, mportPackageMeta *pack)
+int mport_create_primative(mportAssetList *assetlist, mportPackageMeta *pack)
 {
   
   int ret;
@@ -75,7 +75,7 @@ int mport_create_primative(mportPlist *plist, mportPackageMeta *pack)
   if ((ret = create_stub_db(&db)) != MPORT_OK)
     goto CLEANUP;
 
-  if ((ret = insert_plist(db, plist, pack)) != MPORT_OK)
+  if ((ret = insert_assetlist(db, assetlist, pack)) != MPORT_OK)
     goto CLEANUP;
 
   if ((ret = insert_meta(db, pack)) != MPORT_OK)
@@ -86,7 +86,7 @@ int mport_create_primative(mportPlist *plist, mportPackageMeta *pack)
     goto CLEANUP;
   }
     
-  if ((ret = archive_files(plist, pack, tmpdir)) != MPORT_OK)
+  if ((ret = archive_files(assetlist, pack, tmpdir)) != MPORT_OK)
     goto CLEANUP;
   
   CLEANUP:  
@@ -106,9 +106,9 @@ static int create_stub_db(sqlite3 **db)
   return mport_generate_stub_schema(*db);
 }
 
-static int insert_plist(sqlite3 *db, mportPlist *plist, mportPackageMeta *pack)
+static int insert_assetlist(sqlite3 *db, mportAssetList *assetlist, mportPackageMeta *pack)
 {
-  mportPlistEntry *e;
+  mportAssetListEntry *e;
   sqlite3_stmt *stmnt;
   char sql[]  = "INSERT INTO assets (pkg, type, data, checksum) VALUES (?,?,?,?)";
   char md5[33];
@@ -122,11 +122,11 @@ static int insert_plist(sqlite3 *db, mportPlist *plist, mportPackageMeta *pack)
   if (mport_db_prepare(db, &stmnt, sql) != MPORT_OK) 
     RETURN_CURRENT_ERROR;
   
-  STAILQ_FOREACH(e, plist, next) {
-    if (e->type == PLIST_COMMENT)
+  STAILQ_FOREACH(e, assetlist, next) {
+    if (e->type == ASSET_COMMENT)
       continue;
   
-    if (e->type == PLIST_CWD) {
+    if (e->type == ASSET_CWD) {
       strlcpy(cwd, pack->sourcedir, FILENAME_MAX);
       if (e->data == NULL) {
         strlcat(cwd, pack->prefix, FILENAME_MAX);
@@ -145,7 +145,7 @@ static int insert_plist(sqlite3 *db, mportPlist *plist, mportPackageMeta *pack)
       RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
     }
     
-    if (e->type == PLIST_FILE) {
+    if (e->type == ASSET_FILE) {
       (void)snprintf(file, FILENAME_MAX, "%s/%s", cwd, e->data);
       
       if (lstat(file, &st) != 0) 
@@ -343,7 +343,7 @@ static int insert_depends(sqlite3 *db, mportPackageMeta *pack)
 
 
 
-static int archive_files(mportPlist *plist, mportPackageMeta *pack, const char *tmpdir)
+static int archive_files(mportAssetList *assetlist, mportPackageMeta *pack, const char *tmpdir)
 {
   mportBundleWrite *bundle;
   char filename[FILENAME_MAX];
@@ -362,8 +362,8 @@ static int archive_files(mportPlist *plist, mportPackageMeta *pack, const char *
   if (archive_metafiles(bundle, pack) != MPORT_OK)
     RETURN_CURRENT_ERROR;
   
-  /* last step - the real files from the plist */
-  if (archive_plistfiles(bundle, pack, plist) != MPORT_OK)
+  /* last step - the real files from the assetlist */
+  if (archive_assetlistfiles(bundle, pack, assetlist) != MPORT_OK)
     RETURN_CURRENT_ERROR;
     
   mport_bundle_write_finish(bundle);
@@ -405,17 +405,17 @@ static int archive_metafiles(mportBundleWrite *bundle, mportPackageMeta *pack)
   return MPORT_OK;
 }
 
-static int archive_plistfiles(mportBundleWrite *bundle, mportPackageMeta *pack, mportPlist *plist)
+static int archive_assetlistfiles(mportBundleWrite *bundle, mportPackageMeta *pack, mportAssetList *assetlist)
 {
-  mportPlistEntry *e;
+  mportAssetListEntry *e;
   char filename[FILENAME_MAX];
   char *cwd = pack->prefix;
   
-  STAILQ_FOREACH(e, plist, next) {
-    if (e->type == PLIST_CWD) 
+  STAILQ_FOREACH(e, assetlist, next) {
+    if (e->type == ASSET_CWD) 
       cwd = e->data == NULL ? pack->prefix : e->data;
     
-    if (e->type != PLIST_FILE) {
+    if (e->type != ASSET_FILE) {
       continue;
     }
     

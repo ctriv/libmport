@@ -49,7 +49,7 @@ int mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int for
 {
   sqlite3_stmt *stmt;
   int ret, current, total;
-  mportPlistEntryType type;
+  mportAssetListEntryType type;
   char *data, *checksum, *cwd;
   struct stat st;
   char md5[33];
@@ -60,7 +60,7 @@ int mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int for
   }
 
   /* get the file count for the progress meter */
-  if (mport_db_prepare(mport->db, &stmt, "SELECT COUNT(*) FROM assets WHERE type=%i AND pkg=%Q", PLIST_FILE, pack->name) != MPORT_OK)
+  if (mport_db_prepare(mport->db, &stmt, "SELECT COUNT(*) FROM assets WHERE type=%i AND pkg=%Q", ASSET_FILE, pack->name) != MPORT_OK)
     RETURN_CURRENT_ERROR;
 
   switch (sqlite3_step(stmt)) {
@@ -101,7 +101,7 @@ int mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int for
       RETURN_CURRENT_ERROR;
     }
     
-    type     = (mportPlistEntryType)sqlite3_column_int(stmt, 0);
+    type     = (mportAssetListEntryType)sqlite3_column_int(stmt, 0);
     data     = (char *)sqlite3_column_text(stmt, 1);
     checksum = (char *)sqlite3_column_text(stmt, 2);
 
@@ -115,7 +115,7 @@ int mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int for
 
     
     switch (type) {
-      case PLIST_FILE:
+      case ASSET_FILE:
         (mport->progress_step_cb)(++current, total, file);
         
       
@@ -137,14 +137,14 @@ int mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int for
           mport_call_msg_cb(mport, "Could not unlink %s: %s", file, strerror(errno));
 
         break;
-      case PLIST_UNEXEC:
-        if (mport_run_plist_exec(mport, data, cwd, file) != MPORT_OK) {
+      case ASSET_UNEXEC:
+        if (mport_run_asset_exec(mport, data, cwd, file) != MPORT_OK) {
           mport_call_msg_cb(mport, "Could not execute %s: %s", data, mport_err_string());
         }
         break;
-      case PLIST_DIRRM:
-      case PLIST_DIRRMTRY:
-        if (mport_rmdir(file, type == PLIST_DIRRMTRY ? 1 : 0) != MPORT_OK) {
+      case ASSET_DIRRM:
+      case ASSET_DIRRMTRY:
+        if (mport_rmdir(file, type == ASSET_DIRRMTRY ? 1 : 0) != MPORT_OK) {
           mport_call_msg_cb(mport, "Could not remove directory '%s': %s", file, mport_err_string());
         }
         

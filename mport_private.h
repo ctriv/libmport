@@ -64,7 +64,7 @@ int mport_rmdir(const char *, int);
 int mport_chdir(mportInstance *, const char *);
 int mport_file_exists(const char *);
 int mport_xsystem(mportInstance *mport, const char *, ...);
-int mport_run_plist_exec(mportInstance *mport, const char *, const char *, const char *);
+int mport_run_asset_exec(mportInstance *mport, const char *, const char *, const char *);
 
 
 /* Mport Bundle (a file containing packages) */

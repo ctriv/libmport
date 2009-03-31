@@ -142,7 +142,7 @@ static int do_actual_install(
 {
   int file_total, ret;
   int file_count = 0;
-  mportPlistEntryType type;
+  mportAssetListEntryType type;
   struct archive_entry *entry;
   char *data, *checksum, *orig_cwd; 
   char file[FILENAME_MAX], cwd[FILENAME_MAX], dir[FILENAME_MAX];
@@ -155,7 +155,7 @@ static int do_actual_install(
   orig_cwd = getcwd(NULL, 0);
 
   /* get the file count for the progress meter */
-  if (mport_db_prepare(db, &count, "SELECT COUNT(*) FROM stub.assets WHERE type=%i AND pkg=%Q", PLIST_FILE, pack->name) != MPORT_OK)
+  if (mport_db_prepare(db, &count, "SELECT COUNT(*) FROM stub.assets WHERE type=%i AND pkg=%Q", ASSET_FILE, pack->name) != MPORT_OK)
     RETURN_CURRENT_ERROR;
 
   switch (sqlite3_step(count)) {
@@ -204,22 +204,22 @@ static int do_actual_install(
       goto ERROR;
     }
     
-    type     = (mportPlistEntryType)sqlite3_column_int(assets, 0);
+    type     = (mportAssetListEntryType)sqlite3_column_int(assets, 0);
     data     = (char *)sqlite3_column_text(assets, 1);
     checksum = (char *)sqlite3_column_text(assets, 2);  
     
     switch (type) {
-      case PLIST_CWD:      
+      case ASSET_CWD:      
         (void)strlcpy(cwd, data == NULL ? pack->prefix : data, sizeof(cwd));
         if (mport_chdir(mport, cwd) != MPORT_OK)
           goto ERROR;
           
         break;
-      case PLIST_EXEC:
-        if (mport_run_plist_exec(mport, data, cwd, file) != MPORT_OK)
+      case ASSET_EXEC:
+        if (mport_run_asset_exec(mport, data, cwd, file) != MPORT_OK)
           goto ERROR;
         break;
-      case PLIST_FILE:
+      case ASSET_FILE:
         if (mport_bundle_read_next_entry(bundle, &entry) != MPORT_OK)
           goto ERROR;
         
@@ -243,7 +243,7 @@ static int do_actual_install(
       SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));    
       goto ERROR;
     }
-    if (type == PLIST_FILE) {
+    if (type == ASSET_FILE) {
       /* don't put the root in the database! */
       if (sqlite3_bind_text(insert, 2, file + strlen(mport->root), -1, SQLITE_STATIC) != SQLITE_OK) {
         SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
@@ -253,7 +253,7 @@ static int do_actual_install(
         SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
         goto ERROR;
       }
-    } else if (type == PLIST_DIRRM || type == PLIST_DIRRMTRY) {
+    } else if (type == ASSET_DIRRM || type == ASSET_DIRRMTRY) {
       (void)snprintf(dir, FILENAME_MAX, "%s/%s", cwd, data);
       if (sqlite3_bind_text(insert, 2, dir, -1, SQLITE_STATIC) != SQLITE_OK) {
         SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
