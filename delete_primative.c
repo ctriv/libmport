@@ -45,7 +45,7 @@ static int delete_pkg_infra(mportInstance *, mportPackageMeta *);
 static int check_for_upwards_depends(mportInstance *, mportPackageMeta *);
 
 
-int mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int force) 
+MPORT_PUBLIC_API mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int force) 
 {
   sqlite3_stmt *stmt;
   int ret, current, total;

@@ -196,7 +196,7 @@ int mport_get_meta_from_stub(sqlite3 *db, mportPackageMeta ***ref)
  *
  * pack is set to NULL and MPORT_OK is returned if no packages where found.
  */
-int mport_get_meta_from_master(mportInstance *mport, mportPackageMeta ***ref, const char *fmt, ...)
+MPORT_PUBLIC_API mport_get_meta_from_master(mportInstance *mport, mportPackageMeta ***ref, const char *fmt, ...)
 {
   va_list args;
   sqlite3_stmt *stmt;
@@ -247,7 +247,7 @@ int mport_get_meta_from_master(mportInstance *mport, mportPackageMeta ***ref, co
  * 
  * Populate the depends of a pkg using the data in the master database.  
  */
-int mport_get_depends_from_master(mportInstance *mport, mportPackageMeta *pkg)
+MPORT_PUBLIC_API mport_get_depends_from_master(mportInstance *mport, mportPackageMeta *pkg)
 {
   int count = 0;
   int ret;

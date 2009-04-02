@@ -58,16 +58,32 @@ static char *mport_err_defaults[] = {
 };
   
 
-int mport_err_code() 
+/* mport_err_code()
+ *
+ * Return the current numeric error code. 
+ */
+MPORT_PUBLIC_API mport_err_code() 
 {
   return mport_err;
 }
 
+/* mport_err_string() -- PUBLIC API
+ *
+ * Return the current error string (if any).  Do not free this memory, it is static. 
+ */
 const char * mport_err_string()
 {
   return err_msg;
 }
 
+
+/* In general, don't use these - use the macros in mport_private.h */
+
+/* mport_set_error(code, msg)
+ *
+ * Set an error condition, with the given code and message.  A default message will
+ * be used if msg is NULL
+ */
 int mport_set_err(int code, const char *msg) 
 {
   mport_err = code;
@@ -79,6 +95,13 @@ int mport_set_err(int code, const char *msg)
   return code;
 }
 
+
+/* mport_set_errx(code, fmt, arg1, arg2, ...)
+ *
+ * Like mport_set_error, but it has a printf() type formatting syntax.  
+ * There is no way to access the default error messages with this function,
+ * use mport_set_err() for that.
+ */
 int mport_set_errx(int code, const char *fmt, ...) 
 {
     va_list args;

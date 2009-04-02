@@ -37,7 +37,7 @@
 #include "mport.h"
 #include "mport_private.h"
 
-/* allocate mem for a mportInstance */
+/* allocate mem for a mportInstance -- PUBLIC API*/
 mportInstance * mport_instance_new() 
 {
  return (mportInstance *)malloc(sizeof(mportInstance)); 
@@ -45,7 +45,7 @@ mportInstance * mport_instance_new()
  
 
 /* set up the master database, and related instance infrastructure. */
-int mport_instance_init(mportInstance *mport, const char *root)
+MPORT_PUBLIC_API mport_instance_init(mportInstance *mport, const char *root)
 {
   char dir[FILENAME_MAX];
   
@@ -92,7 +92,7 @@ int mport_instance_init(mportInstance *mport, const char *root)
 }
 
 
-/* Setters for the variable UI callbacks. */
+/* Setters for the variable UI callbacks.  These are all public. */
 void mport_set_msg_cb(mportInstance *mport, mport_msg_cb cb) 
 {
   mport->msg_cb = cb;
@@ -139,7 +139,7 @@ void mport_call_msg_cb(mportInstance *mport, const char *fmt, ...)
 }
   
 
-int mport_instance_free(mportInstance *mport) 
+MPORT_PUBLIC_API mport_instance_free(mportInstance *mport) 
 {
   if (sqlite3_close(mport->db) != SQLITE_OK) {
     RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(mport->db));
