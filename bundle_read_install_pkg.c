@@ -30,14 +30,11 @@
 #include "mport.h"
 #include "mport_private.h"
 
-//#include <sys/cdefs.h>
 #include <sys/stat.h>
 #include <libgen.h>
-//#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
-//#include <archive.h>
 #include <archive_entry.h>
 
 
