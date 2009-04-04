@@ -75,14 +75,3 @@ MPORT_PUBLIC_API mport_install_primative(mportInstance *mport, const char *filen
     
   return MPORT_OK;  
 }
-
-
-
-
-      
-
-
-
- 
- 
-
