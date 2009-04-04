@@ -39,6 +39,8 @@
 
 #define MPORT_PUBLIC_API int
 
+#define MPORT_BUNDLE_VERSION 1
+#define MPORT_BUNDLE_VERSION_STR "1"
 
 /* callback syntaxtic sugar */
 void mport_call_msg_cb(mportInstance *, const char *, ...);

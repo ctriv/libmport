@@ -395,7 +395,7 @@ static int populate_meta_from_stmt(mportPackageMeta *pack, sqlite3 *db, sqlite3_
 int mport_generate_stub_schema(sqlite3 *db) 
 {
   RUN_SQL(db, "CREATE TABLE meta      (field text NOT NULL, value text NOT NULL");
-  RUN_SQL(db, "INSERT INTO meta VALUE (\"bundle_format_version\", 1");
+  RUN_SQL(db, "INSERT INTO meta VALUE (\"bundle_format_version\", " MPORT_BUNDLE_VERSION_STR);
   RUN_SQL(db, "CREATE TABLE assets    (pkg text not NULL, type int NOT NULL, data text, checksum text)");
   RUN_SQL(db, "CREATE TABLE packages  (pkg text NOT NULL, version text NOT NULL, origin text NOT NULL, lang text, options text, date int NOT NULL, prefix text NOT NULL, comment text)");
   RUN_SQL(db, "CREATE TABLE conflicts (pkg text NOT NULL, conflict_pkg text NOT NULL, conflict_version text NOT NULL)");

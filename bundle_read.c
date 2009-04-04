@@ -233,6 +233,10 @@ int mport_bundle_read_extract_next_file(mportBundleRead *bundle, struct archive_
  */
 int mport_bundle_read_prep_for_install(mportInstance *mport, mportBundleRead *bundle)
 {
+  sqlite3_stmt *stmt;
+  int bundle_version;
+  int ret;
+  
   if (mport_bundle_read_extract_metafiles(bundle, &(bundle->tmpdir)) != MPORT_OK)
     RETURN_CURRENT_ERROR;
   
@@ -241,6 +245,28 @@ int mport_bundle_read_prep_for_install(mportInstance *mport, mportBundleRead *bu
 
   bundle->stub_attached = 1;
     
+  if (mport_db_prepare(mport->db, &stmt, "SELECT value FROM stub.meta WHERE field='bundle_format_version") != MPORT_OK)
+    RETURN_CURRENT_ERROR;
+
+  ret = sqlite3_step(stmt);
+  sqlite3_finalize(stmt);
+    
+  switch (ret) {
+    case SQLITE_ROW:
+      bundle_version = sqlite3_column_int(stmt, 0);
+      
+      if (bundle_version > MPORT_BUNDLE_VERSION) {
+        RETURN_ERRORX(MPORT_ERR_MALFORMED_BUNDLE, "%s: bundle is version %i; this version of mport only supports up to version %i", bundle->filename, bundle_version, MPORT_BUNDLE_VERSION);
+      }
+      break;
+    case SQLITE_DONE:
+      RETURN_ERRORX(MPORT_ERR_MALFORMED_BUNDLE, "%s: no stub.meta table, or no bundle_format_version field", bundle->filename);    
+      break;
+    default:
+      RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(mport->db));
+      break;
+  }
+  
   return MPORT_OK;
-}
+}    
 
