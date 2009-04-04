@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2007 Chris Reinhardt
+ * Copyright (c) 2007-2009 Chris Reinhardt
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without

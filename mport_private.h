@@ -1,6 +1,6 @@
 /* $MidnightBSD: src/lib/libmport/mport.h,v 1.10 2008/04/26 17:59:26 ctriv Exp $
  *
- * Copyright (c) 2007 Chris Reinhardt
+ * Copyright (c) 2007-2009 Chris Reinhardt
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
