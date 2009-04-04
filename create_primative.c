@@ -186,7 +186,7 @@ static int insert_meta(sqlite3 *db, mportPackageMeta *pack)
   struct timespec now;
   int ret;
   
-  char sql[]  = "INSERT INTO packages (pkg, version, origin, lang, prefix, date) VALUES (?,?,?,?,?,?)";
+  char sql[]  = "INSERT INTO packages (pkg, version, origin, lang, prefix, date, comment) VALUES (?,?,?,?,?,?,?)";
   
   if (sqlite3_prepare_v2(db, sql, -1, &stmnt, &rest) != SQLITE_OK) {
     RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
@@ -211,6 +211,10 @@ static int insert_meta(sqlite3 *db, mportPackageMeta *pack)
   }
   
   if (sqlite3_bind_int(stmnt, 6, now.tv_sec) != SQLITE_OK) {
+    RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
+  }
+  
+  if (sqlite3_bind_text(stmnt, 7, pack->comment, -1, SQLITE_STATIC) != SQLITE_OK) {
     RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
   }
     

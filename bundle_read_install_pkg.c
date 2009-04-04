@@ -114,7 +114,7 @@ static int do_actual_install(mportInstance *mport, mportBundleRead *bundle, mpor
 
   /* Insert the package meta row into the packages table (We use pack here because things might have been twiddled) */
   /* Note that this will be marked as dirty by default */  
-  if (mport_db_do(db, "INSERT INTO packages (pkg, version, origin, prefix, lang, options) VALUES (%Q,%Q,%Q,%Q,%Q,%Q)", pkg->name, pkg->version, pkg->origin, pkg->prefix, pkg->lang, pkg->options) != MPORT_OK)
+  if (mport_db_do(db, "INSERT INTO packages (pkg, version, origin, prefix, lang, options, comment) VALUES (%Q,%Q,%Q,%Q,%Q,%Q,%Q)", pkg->name, pkg->version, pkg->origin, pkg->prefix, pkg->lang, pkg->options, pkg->comment) != MPORT_OK)
     goto ERROR;
 
   /* Insert the assets into the master table (We do this one by one because we want to insert file 

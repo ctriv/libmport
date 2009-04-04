@@ -170,7 +170,7 @@ int mport_get_meta_from_stub(mportInstance *mport, mportPackageMeta ***ref)
     RETURN_ERROR(MPORT_ERR_INTERNAL, "stub database contains no packages.");
   }
     
-  if (mport_db_prepare(db, &stmt, "SELECT pkg, version, origin, lang, prefix FROM stub.packages") != MPORT_OK)
+  if (mport_db_prepare(db, &stmt, "SELECT pkg, version, origin, lang, prefix, comment FROM stub.packages") != MPORT_OK)
     RETURN_CURRENT_ERROR;
   
   ret = populate_vec_from_stmt(ref, len, db, stmt);
@@ -231,7 +231,7 @@ MPORT_PUBLIC_API mport_get_meta_from_master(mportInstance *mport, mportPackageMe
     return MPORT_OK;
   }
 
-  if (mport_db_prepare(db, &stmt, "SELECT pkg, version, origin, lang, prefix FROM packages WHERE %s", where) != MPORT_OK)
+  if (mport_db_prepare(db, &stmt, "SELECT pkg, version, origin, lang, prefix, comment FROM packages WHERE %s", where) != MPORT_OK)
     RETURN_CURRENT_ERROR;
     
     
@@ -372,6 +372,15 @@ static int populate_meta_from_stmt(mportPackageMeta *pack, sqlite3 *db, sqlite3_
   if ((pack->prefix = strdup(tmp)) == NULL)
     return MPORT_ERR_NO_MEM;
 
+
+  /* Copy comment to pack->comment */
+  if ((tmp = sqlite3_column_text(stmt, 5)) == NULL) 
+    RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
+  
+  if ((pack->comment = strdup(tmp)) == NULL)
+    return MPORT_ERR_NO_MEM;
+
+
   
   return MPORT_OK;
 }
@@ -386,7 +395,7 @@ static int populate_meta_from_stmt(mportPackageMeta *pack, sqlite3 *db, sqlite3_
 int mport_generate_stub_schema(sqlite3 *db) 
 {
   RUN_SQL(db, "CREATE TABLE assets    (pkg text not NULL, type int NOT NULL, data text, checksum text)");
-  RUN_SQL(db, "CREATE TABLE packages  (pkg text NOT NULL, version text NOT NULL, origin text NOT NULL, lang text, options text, date int NOT NULL, prefix text NOT NULL)");
+  RUN_SQL(db, "CREATE TABLE packages  (pkg text NOT NULL, version text NOT NULL, origin text NOT NULL, lang text, options text, date int NOT NULL, prefix text NOT NULL, comment text)");
   RUN_SQL(db, "CREATE TABLE conflicts (pkg text NOT NULL, conflict_pkg text NOT NULL, conflict_version text NOT NULL)");
   RUN_SQL(db, "CREATE TABLE depends   (pkg text NOT NULL, depend_pkgname text NOT NULL, depend_pkgversion text, depend_port text NOT NULL)");
 
@@ -395,7 +404,7 @@ int mport_generate_stub_schema(sqlite3 *db)
 
 int mport_generate_master_schema(sqlite3 *db) 
 {
-  RUN_SQL(db, "CREATE TABLE IF NOT EXISTS packages (pkg text NOT NULL, version text NOT NULL, origin text NOT NULL, prefix text NOT NULL, lang text, options text, date int, status text default 'dirty')");
+  RUN_SQL(db, "CREATE TABLE IF NOT EXISTS packages (pkg text NOT NULL, version text NOT NULL, origin text NOT NULL, prefix text NOT NULL, lang text, options text, date int, status text default 'dirty', comment text)");
   RUN_SQL(db, "CREATE UNIQUE INDEX IF NOT EXISTS packages_pkg ON packages (pkg)");
   RUN_SQL(db, "CREATE INDEX IF NOT EXISTS packages_origin ON packages (origin)");
 
