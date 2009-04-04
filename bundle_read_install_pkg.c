@@ -199,6 +199,11 @@ static int do_actual_install(mportInstance *mport, mportBundleRead *bundle, mpor
         SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
         goto ERROR;
       }
+      
+      if (sqlite3_bind_null(insert, 3) != SQLITE_OK) {
+        SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
+        goto ERROR;
+      }
     } else {  
       if (sqlite3_bind_text(insert, 2, data, -1, SQLITE_STATIC) != SQLITE_OK) {
         SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
