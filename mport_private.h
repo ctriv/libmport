@@ -39,17 +39,12 @@
 
 #define MPORT_PUBLIC_API int
 
-/* private install API */
-typedef int (*mport_depend_resolver)(mportInstance *, mportPackageMeta *, const char *);
-int mport_install_handler(mportInstance *, mport_depend_resolver, const char *, const char *);
-
-
 
 /* callback syntaxtic sugar */
 void mport_call_msg_cb(mportInstance *, const char *, ...);
 
 /* precondition checking */
-int mport_check_install_preconditions(mportInstance *, mportPackageMeta *, mport_depend_resolver);
+int mport_check_install_preconditions(mportInstance *, mportPackageMeta *);
 int mport_older_pkg_is_installed(mportInstance *, mportPackageMeta *);
 
 /* schema */
@@ -59,7 +54,7 @@ int mport_generate_stub_schema(sqlite3 *);
 /* Various database convience functions */
 int mport_attach_stub_db(sqlite3 *, const char *);
 int mport_detach_stub_db(sqlite3 *);
-int mport_get_meta_from_stub(sqlite3 *, mportPackageMeta ***);
+int mport_get_meta_from_stub(mportInstance *, mportPackageMeta ***);
 int mport_db_do(sqlite3 *, const char *, ...);
 int mport_db_prepare(sqlite3 *, sqlite3_stmt **, const char *, ...);
 
@@ -86,7 +81,9 @@ typedef struct {
 typedef struct {
   struct archive *archive;
   char *filename;
+  char *tmpdir;
   struct archive_entry *firstreal;
+  short stub_attached;
 } mportBundleRead;
 
 
@@ -99,12 +96,13 @@ int mport_bundle_write_add_entry(mportBundleWrite *, mportBundleRead *, struct a
 
 mportBundleRead* mport_bundle_read_new(void);
 int mport_bundle_read_init(mportBundleRead *, const char *);
-int mport_bundle_read_finish(mportBundleRead *);
+int mport_bundle_read_finish(mportInstance *, mportBundleRead *);
+int mport_bundle_read_prep_for_install(mportInstance *, mportBundleRead *);
 int mport_bundle_read_extract_metafiles(mportBundleRead *, char **);
 int mport_bundle_read_skip_metafiles(mportBundleRead *);
 int mport_bundle_read_next_entry(mportBundleRead *, struct archive_entry **);
 int mport_bundle_read_extract_next_file(mportBundleRead *, struct archive_entry *);
-
+int mport_bundle_read_install_pkg(mportInstance *, mportBundleRead *, mportPackageMeta *);
 
 
 

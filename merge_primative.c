@@ -295,18 +295,18 @@ static int archive_metafiles(mportBundleWrite *bundle, sqlite3 *db, struct table
 
     
     if (mport_bundle_read_init(inbundle, filename) != MPORT_OK) {
-      mport_bundle_read_finish(inbundle);
+      mport_bundle_read_finish(NULL, inbundle);
       goto DONE;
     }
 
     
     /* skip the sub db */
     if (mport_bundle_read_next_entry(inbundle, &entry) != MPORT_OK) {
-      mport_bundle_read_finish(inbundle);
+      mport_bundle_read_finish(NULL, inbundle);
       goto DONE;
     }
     if (archive_read_data_skip(inbundle->archive) != ARCHIVE_OK) {
-      mport_bundle_read_finish(inbundle);
+      mport_bundle_read_finish(NULL, inbundle);
       ret = SET_ERRORX(MPORT_ERR_ARCHIVE, "Unable to read %s: %s", filename, archive_error_string(inbundle->archive));
       goto DONE;
     }
@@ -314,7 +314,7 @@ static int archive_metafiles(mportBundleWrite *bundle, sqlite3 *db, struct table
     
     while (1) {
       if (mport_bundle_read_next_entry(inbundle, &entry) != MPORT_OK) {
-        mport_bundle_read_finish(inbundle);
+        mport_bundle_read_finish(NULL, inbundle);
         goto DONE;
       } 
       
@@ -325,12 +325,12 @@ static int archive_metafiles(mportBundleWrite *bundle, sqlite3 *db, struct table
       
       if ((ret = mport_bundle_write_add_entry(bundle, inbundle, entry)) != MPORT_OK) {
         DIAG("bundle add entry failed")
-        mport_bundle_read_finish(inbundle);
+        mport_bundle_read_finish(NULL, inbundle);
         goto DONE;
       }
     }
 
-    mport_bundle_read_finish(inbundle);    
+    mport_bundle_read_finish(NULL, inbundle);    
   }
   
   DONE:
@@ -379,18 +379,18 @@ static int archive_package_files(mportBundleWrite *bundle, sqlite3 *db, struct t
         
     
     if (mport_bundle_read_init(inbundle, file) != MPORT_OK) {
-      mport_bundle_read_finish(inbundle);
+      mport_bundle_read_finish(NULL, inbundle);
       RETURN_CURRENT_ERROR;
     }
     
     if (mport_bundle_read_skip_metafiles(inbundle) != MPORT_OK) {
-      mport_bundle_read_finish(inbundle);
+      mport_bundle_read_finish(NULL, inbundle);
       sqlite3_finalize(stmt);
       RETURN_CURRENT_ERROR;
     }
 
     if (mport_db_prepare(db, &files, "SELECT data FROM assets WHERE pkg=%Q AND type=%i", pkgname, ASSET_FILE) != MPORT_OK) {
-      mport_bundle_read_finish(inbundle);
+      mport_bundle_read_finish(NULL, inbundle);
       sqlite3_finalize(stmt);
       RETURN_CURRENT_ERROR;
     }
@@ -405,14 +405,14 @@ static int archive_package_files(mportBundleWrite *bundle, sqlite3 *db, struct t
         SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
         sqlite3_finalize(stmt);
         sqlite3_finalize(files);
-        mport_bundle_read_finish(inbundle);
+        mport_bundle_read_finish(NULL, inbundle);
         RETURN_CURRENT_ERROR;
       }
       
       file = (char *)sqlite3_column_text(files, 0);
       
       if (mport_bundle_read_next_entry(inbundle, &entry) != MPORT_OK) {
-        mport_bundle_read_finish(inbundle);
+        mport_bundle_read_finish(NULL, inbundle);
         sqlite3_finalize(stmt);
         sqlite3_finalize(files);
         RETURN_CURRENT_ERROR;
@@ -420,7 +420,7 @@ static int archive_package_files(mportBundleWrite *bundle, sqlite3 *db, struct t
       
       if (strcmp(file, archive_entry_pathname(entry)) != 0) {
         SET_ERRORX(MPORT_ERR_INTERNAL, "Plist to archive mismatch in package %s: found '%s', expected '%s'", pkgname, archive_entry_pathname(entry), file);
-        mport_bundle_read_finish(inbundle);
+        mport_bundle_read_finish(NULL, inbundle);
         sqlite3_finalize(stmt);
         sqlite3_finalize(files);
         RETURN_CURRENT_ERROR;
@@ -429,7 +429,7 @@ static int archive_package_files(mportBundleWrite *bundle, sqlite3 *db, struct t
       DIAG("Adding realfile: %s", archive_entry_pathname(entry));
   
       if (mport_bundle_write_add_entry(bundle, inbundle, entry) != MPORT_OK) {
-        mport_bundle_read_finish(inbundle);
+        mport_bundle_read_finish(NULL, inbundle);
         sqlite3_finalize(stmt);
         sqlite3_finalize(files);
         RETURN_CURRENT_ERROR;
@@ -438,7 +438,7 @@ static int archive_package_files(mportBundleWrite *bundle, sqlite3 *db, struct t
   
     /* we're done with this package, onto the next one */
     sqlite3_finalize(files);
-    mport_bundle_read_finish(inbundle);
+    mport_bundle_read_finish(NULL, inbundle);
   } 
   
   sqlite3_finalize(stmt);

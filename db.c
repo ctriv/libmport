@@ -142,15 +142,16 @@ int mport_detach_stub_db(sqlite3 *db)
 
 
 
-/* mport_get_meta_from_stub(sqlite *db, mportPackageMeta ***pack)
+/* mport_get_meta_from_stub(mportInstance *mport, mportPackageMeta ***pack)
  *
  * Allocates and populates a vector of mportPackageMeta structs from the stub database
  * connected to db. These structs represent all the packages in the stub database.
  * This does not populate the conflicts and depends fields.
  */
-int mport_get_meta_from_stub(sqlite3 *db, mportPackageMeta ***ref)
+int mport_get_meta_from_stub(mportInstance *mport, mportPackageMeta ***ref)
 {
   sqlite3_stmt *stmt;
+  sqlite3 *db = mport->db;
   int len, ret;
   
   if (mport_db_prepare(db, &stmt, "SELECT COUNT(*) FROM stub.packages") != MPORT_OK)

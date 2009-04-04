@@ -42,7 +42,7 @@
  */
 mportBundleRead * mport_bundle_read_new()
 {
-  return (mportBundleRead *)malloc(sizeof(mportBundleRead));
+  return (mportBundleRead *)calloc(1, sizeof(mportBundleRead));
 }
 
 
@@ -60,8 +60,6 @@ int mport_bundle_read_init(mportBundleRead *bundle, const char *filename)
     RETURN_ERROR(MPORT_ERR_NO_MEM, "Couldn't dup filename");
     
   
-  bundle->firstreal = NULL;
-  
   archive_read_support_format_tar(bundle->archive);
   archive_read_support_compression_bzip2(bundle->archive);
   
@@ -78,13 +76,24 @@ int mport_bundle_read_init(mportBundleRead *bundle, const char *filename)
  *
  * close the file connected to the bundle, and free any memory allocated.
  */
-int mport_bundle_read_finish(mportBundleRead *bundle)
+int mport_bundle_read_finish(mportInstance *mport, mportBundleRead *bundle)
 {
   int ret = MPORT_OK;
     
   if (archive_read_finish(bundle->archive) != ARCHIVE_OK)
     ret = SET_ERROR(MPORT_ERR_ARCHIVE, archive_error_string(bundle->archive));
-          
+
+  if (bundle->stub_attached && (mport != NULL)) {
+    if (mport_detach_stub_db(mport->db) != MPORT_OK)
+      ret = mport_err_code();
+  }
+
+  if (bundle->tmpdir != NULL) {
+    if (mport_rmtree(bundle->tmpdir) != MPORT_OK)
+      ret = mport_err_code();
+  }      
+
+  free(bundle->tmpdir);
   free(bundle->filename);
   free(bundle);
                   
@@ -213,3 +222,25 @@ int mport_bundle_read_extract_next_file(mportBundleRead *bundle, struct archive_
   
   return MPORT_OK;
 }
+
+
+
+/* 
+ * mport_bundle_read_prep_for_install(mport, bundle)
+ * 
+ * Extract the metafile into a tmpdir that the bundle maintains, attach the stub db for the 
+ * instance master database.
+ */
+int mport_bundle_read_prep_for_install(mportInstance *mport, mportBundleRead *bundle)
+{
+  if (mport_bundle_read_extract_metafiles(bundle, &(bundle->tmpdir)) != MPORT_OK)
+    RETURN_CURRENT_ERROR;
+  
+  if (mport_attach_stub_db(mport->db, bundle->tmpdir) != MPORT_OK)
+    RETURN_CURRENT_ERROR;
+
+  bundle->stub_attached = 1;
+    
+  return MPORT_OK;
+}
+
