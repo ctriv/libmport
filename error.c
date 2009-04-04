@@ -87,10 +87,15 @@ const char * mport_err_string()
 int mport_set_err(int code, const char *msg) 
 {
   mport_err = code;
-  if (msg != NULL) {
-    strlcpy(err_msg, msg, sizeof(err_msg));
-  } else {
-    strlcpy(err_msg, mport_err_defaults[code], sizeof(mport_err_defaults[code]));
+  
+  if (code == MPORT_OK) {
+    bzero(err_msg, sizeof(err_msg));
+  } else {  
+    if (msg != NULL) {
+      strlcpy(err_msg, msg, sizeof(err_msg));
+    } else {
+      strlcpy(err_msg, mport_err_defaults[code], sizeof(mport_err_defaults[code]));
+    }
   }
   return code;
 }

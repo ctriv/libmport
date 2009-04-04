@@ -245,7 +245,7 @@ int mport_bundle_read_prep_for_install(mportInstance *mport, mportBundleRead *bu
 
   bundle->stub_attached = 1;
     
-  if (mport_db_prepare(mport->db, &stmt, "SELECT value FROM stub.meta WHERE field='bundle_format_version") != MPORT_OK)
+  if (mport_db_prepare(mport->db, &stmt, "SELECT value FROM stub.meta WHERE field='bundle_format_version'") != MPORT_OK)
     RETURN_CURRENT_ERROR;
 
   ret = sqlite3_step(stmt);

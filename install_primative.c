@@ -66,7 +66,7 @@ MPORT_PUBLIC_API mport_install_primative(mportInstance *mport, const char *filen
         (mport_bundle_read_install_pkg(mport, bundle, pkg) != MPORT_OK)) 
     {
       mport_call_msg_cb(mport, "Unable to install %s-%s: %s", pkg->name, pkg->version, mport_err_string());
-      mport_set_err(0, NULL);
+      mport_set_err(MPORT_OK, NULL);
     }
   }
   
