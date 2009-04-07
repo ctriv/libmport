@@ -45,7 +45,7 @@ static mportAssetListEntryType parse_command(const char*);
 /* Do everything needed to set up a new plist.  Always use this to create a plist,
  * don't go off and do it yourself.
  */
-mportAssetList* mport_assetlist_new() 
+MPORT_PUBLIC_API mportAssetList* mport_assetlist_new() 
 {
   mportAssetList *list = (mportAssetList*)malloc(sizeof(mportAssetList));
   STAILQ_INIT(list);
@@ -54,7 +54,7 @@ mportAssetList* mport_assetlist_new()
 
 
 /* free all the entries in the list, and then the list itself. */
-void mport_assetlist_free(mportAssetList *list) 
+MPORT_PUBLIC_API void mport_assetlist_free(mportAssetList *list) 
 {
   mportAssetListEntry *n;
 
@@ -69,11 +69,11 @@ void mport_assetlist_free(mportAssetList *list)
 }
 
 
-/* Parsers the contenst of the file and returns a assetlist data structure.
+/* Parses the contents of the given plistfile pointer.  Returns MPORT_OK on success, 
+ * an error code on failure.
  *
- * Returns NULL on failure.
  */
-int mport_parse_plistfile(FILE *fp, mportAssetList *list)
+MPORT_PUBLIC_API int mport_parse_plistfile(FILE *fp, mportAssetList *list)
 {
   size_t length;
   char *line;

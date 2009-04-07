@@ -54,7 +54,7 @@ static int archive_assetlistfiles(mportBundleWrite *, mportPackageMeta *, mportA
 static int clean_up(const char *);
 
 
-MPORT_PUBLIC_API mport_create_primative(mportAssetList *assetlist, mportPackageMeta *pack)
+MPORT_PUBLIC_API int mport_create_primative(mportAssetList *assetlist, mportPackageMeta *pack)
 {
   
   int ret;

@@ -62,16 +62,16 @@ static char *mport_err_defaults[] = {
  *
  * Return the current numeric error code. 
  */
-MPORT_PUBLIC_API mport_err_code() 
+MPORT_PUBLIC_API int mport_err_code() 
 {
   return mport_err;
 }
 
-/* mport_err_string() -- PUBLIC API
+/* mport_err_string()
  *
  * Return the current error string (if any).  Do not free this memory, it is static. 
  */
-const char * mport_err_string()
+MPORT_PUBLIC_API const char * mport_err_string()
 {
   return err_msg;
 }

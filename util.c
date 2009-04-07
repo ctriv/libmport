@@ -39,14 +39,14 @@
 #include "mport_private.h"
 
 /* Package meta-data creation and destruction */
-mportPackageMeta* mport_packagemeta_new() 
+MPORT_PUBLIC_API mportPackageMeta* mport_packagemeta_new() 
 {
   /* we use calloc so any pointers that aren't set are NULL.
      (calloc zero's out the memory region. */
   return (mportPackageMeta *)calloc(1, sizeof(mportPackageMeta));
 }
 
-void mport_packagemeta_free(mportPackageMeta *pack)
+MPORT_PUBLIC_API void mport_packagemeta_free(mportPackageMeta *pack)
 {
   int i;
   
@@ -86,7 +86,7 @@ void mport_packagemeta_free(mportPackageMeta *pack)
 }
 
 /* free a vector of mportPackageMeta pointers */
-void mport_packagemeta_vec_free(mportPackageMeta **vec)
+MPORT_PUBLIC_API void mport_packagemeta_vec_free(mportPackageMeta **vec)
 {
   int i;
   for (i=0; *(vec + i) != NULL; i++) {

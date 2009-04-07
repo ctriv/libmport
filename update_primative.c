@@ -35,7 +35,7 @@
 static int set_prefix_to_installed(mportInstance *, mportPackageMeta *);
 
 
-MPORT_PUBLIC_API mport_update_primative(mportInstance *mport, const char *filename)
+MPORT_PUBLIC_API int mport_update_primative(mportInstance *mport, const char *filename)
 {
   mportBundleRead *bundle;
   mportPackageMeta **pkgs, *pkg;

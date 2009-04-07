@@ -37,7 +37,7 @@
 #endif
 
 
-#define MPORT_PUBLIC_API int
+#define MPORT_PUBLIC_API 
 
 #define MPORT_BUNDLE_VERSION 1
 #define MPORT_BUNDLE_VERSION_STR "1"

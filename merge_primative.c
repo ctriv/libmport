@@ -67,7 +67,7 @@ static uint32_t SuperFastHash(const char *);
  * named `outfile`.  Care is taken to not have duplicates, to ensure that the exterior
  * depends are correct, and that the packages are in an optimal order for installation.
  */ 
-int mport_merge_primative(const char **filenames, const char *outfile)
+MPORT_PUBLIC_API int mport_merge_primative(const char **filenames, const char *outfile)
 {
   sqlite3 *db;
   mportBundleWrite *bundle;
