@@ -57,6 +57,7 @@ int mport_generate_stub_schema(sqlite3 *);
 int mport_attach_stub_db(sqlite3 *, const char *);
 int mport_detach_stub_db(sqlite3 *);
 int mport_get_meta_from_stub(mportInstance *, mportPackageMeta ***);
+int mport_get_assetlist_from_master(mportInstance *, mportPackageMeta *, mportAssetList **);
 int mport_db_do(sqlite3 *, const char *, ...);
 int mport_db_prepare(sqlite3 *, sqlite3_stmt **, const char *, ...);
 

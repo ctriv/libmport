@@ -386,6 +386,52 @@ static int populate_meta_from_stmt(mportPackageMeta *pack, sqlite3 *db, sqlite3_
 }
 
 
+int mport_get_assetlist_from_master(mportInstance *mport, mportPackageMeta *pkg, mportAssetList **alist_p)
+{
+  mportAssetList *alist;
+  sqlite3_stmt *stmt;
+  int ret;
+  mportAssetListEntry *e;
+  
+  if ((alist = mport_assetlist_new()) == NULL)
+    return MPORT_ERR_NO_MEM;
+
+  *alist_p = alist;
+  
+  if (mport_db_prepare(mport->db, &stmt, "SELECT type, data FROM assets WHERE pkg=%Q", pkg->name) != MPORT_OK)
+    RETURN_CURRENT_ERROR;
+    
+  while (1) {
+    ret = sqlite3_step(stmt);
+    
+    if (ret == SQLITE_DONE)
+      break;
+      
+    if (ret != SQLITE_ROW) {
+      sqlite3_finalize(stmt);
+      RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(mport->db));
+    }
+    
+    e = (mportAssetListEntry *)malloc(sizeof(mportAssetListEntry));
+    
+    if (e == NULL) {
+      sqlite3_finalize(stmt);
+      return MPORT_ERR_NO_MEM;
+    }
+    
+    e->type = sqlite3_column_int(stmt, 0);
+    e->data = strdup(sqlite3_column_text(stmt, 1));
+    
+    if (e->data == NULL) {
+      sqlite3_finalize(stmt);
+      return MPORT_ERR_NO_MEM;
+    }
+  }
+  
+  sqlite3_finalize(stmt);
+  return MPORT_OK;
+}
+
 
 #define RUN_SQL(db, sql) \
   if (mport_db_do(db, sql) != MPORT_OK) \
