@@ -33,8 +33,8 @@
 #include <errno.h>
 #include <stdlib.h>
 
-static int make_backup_package(mportInstance *, mportPackageMeta *);
-static int install_backup_package(mportInstance *mport, mportPackageMeta *pkg);
+static int make_backup_bundle(mportInstance *, mportPackageMeta *);
+static int install_backup_bundle(mportInstance *mport, mportPackageMeta *pkg);
 
 int mport_bundle_read_update_pkg(mportInstance *mport, mportBundleRead *bundle, mportPackageMeta *pkg)
 {
@@ -48,7 +48,7 @@ int mport_bundle_read_update_pkg(mportInstance *mport, mportBundleRead *bundle, 
   if ((pkg->pkg_filename = strdup(tmpfile)) == NULL)
     return MPORT_ERR_NO_MEM;
   
-  if (make_backup_package(mport, pkg) != MPORT_OK) {
+  if (make_backup_bundle(mport, pkg) != MPORT_OK) {
     free(pkg->pkg_filename);
     RETURN_CURRENT_ERROR;
   }
@@ -59,7 +59,7 @@ int mport_bundle_read_update_pkg(mportInstance *mport, mportBundleRead *bundle, 
         (mport_bundle_read_install_pkg(mport, bundle, pkg) != MPORT_OK)
   ) 
   {
-    install_backup_package(mport, pkg);
+    install_backup_bundle(mport, pkg);
     free(pkg->pkg_filename);
     RETURN_CURRENT_ERROR;
   }           
@@ -72,26 +72,26 @@ int mport_bundle_read_update_pkg(mportInstance *mport, mportBundleRead *bundle, 
 }
   
   
-static int make_backup_package(mportInstance *mport, mportPackageMeta *pkg)
+static int make_backup_bundle(mportInstance *mport, mportPackageMeta *pkg)
 {
   mportAssetList *alist;
+  int ret;
   
   if (mport_get_assetlist_from_master(mport, pkg, &alist) != MPORT_OK)
     RETURN_CURRENT_ERROR;
   
   pkg->sourcedir = strdup("");
   
-  if (mport_create_primative(alist, pkg) != MPORT_OK) {
-    free(pkg->sourcedir);
-    RETURN_CURRENT_ERROR;
-  }
-  
+  ret = mport_create_primative(alist, pkg);
+ 
+  mport_assetlist_free(alist);
   free(pkg->sourcedir);
-  return MPORT_OK;
+
+  return ret;
 }        
 
 
-static int install_backup_package(mportInstance *mport, mportPackageMeta *pkg) 
+static int install_backup_bundle(mportInstance *mport, mportPackageMeta *pkg) 
 {
   /* at some point we might want to look into making this more forceful, but
    * this will do for the moment.  Wrap in a function for this future. */
