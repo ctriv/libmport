@@ -153,7 +153,7 @@ int mport_generate_stub_schema(sqlite3 *db)
   RUN_SQL(db, "CREATE TABLE packages  (pkg text NOT NULL, version text NOT NULL, origin text NOT NULL, lang text, options text, prefix text NOT NULL, comment text)");
   RUN_SQL(db, "CREATE TABLE conflicts (pkg text NOT NULL, conflict_pkg text NOT NULL, conflict_version text NOT NULL)");
   RUN_SQL(db, "CREATE TABLE depends   (pkg text NOT NULL, depend_pkgname text NOT NULL, depend_pkgversion text, depend_port text NOT NULL)");
-
+  RUN_SQL(db, "CREATE TABLE categories (pkg text NOT NULL, category text NOT NULL");
   return MPORT_OK;  
 }
 
@@ -174,5 +174,7 @@ int mport_generate_master_schema(sqlite3 *db)
   RUN_SQL(db, "CREATE INDEX IF NOT EXISTS assets_pkg ON assets (pkg)");
   RUN_SQL(db, "CREATE INDEX IF NOT EXISTS assets_data ON assets (data)");
   
+  RUN_SQL(db, "CREATE TABLE IF NOT EXISTS categories (pkg text NOT NULL, category text NOT NULL");
+  RUN_SQL(db, "CREATE INDEX IF NOT EXISTS categories_pkg ON categories (pkg, category)");
   return MPORT_OK;
 }
