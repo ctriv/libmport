@@ -116,9 +116,11 @@ typedef struct {
   char *pkgmessage;
 } mportPackageMeta;  
 
-mportPackageMeta * mport_packagemeta_new(void);
-void mport_packagemeta_free(mportPackageMeta *);
-void mport_packagemeta_vec_free(mportPackageMeta **);
+mportPackageMeta * mport_pkgmeta_new(void);
+void mport_pkgmeta_free(mportPackageMeta *);
+void mport_pkgmeta_vec_free(mportPackageMeta **);
+int mport_pkgmeta_search_master(mportInstance *, mportPackageMeta ***, const char *, ...);
+int mport_pkgmeta_get_downdepends(mportInstance *, mportPackageMeta *);
 
 
 /* Package creation */
@@ -136,9 +138,6 @@ int mport_update_primative(mportInstance *, const char *);
 /* Package deletion */
 int mport_delete_primative(mportInstance *, mportPackageMeta *, int);
 
-/* DB Stuff */
-int mport_get_meta_from_master(mportInstance *, mportPackageMeta ***, const char *, ...);
-int mport_get_depends_from_master(mportInstance *, mportPackageMeta *);
 
 /* version comparing */
 int mport_version_cmp(const char *, const char *);

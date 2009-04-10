@@ -79,6 +79,12 @@ int mport_check_install_preconditions(mportInstance *mport, mportPackageMeta *pa
 }
 
 
+int mport_check_update_preconditions(mportInstance *mport, mportPackageMeta *pack) 
+{
+  /* XXX WRITE ME */
+  return MPORT_OK;
+}
+
 
 static int check_if_installed(sqlite3 *db, mportPackageMeta *pack)
 {

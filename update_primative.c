@@ -50,7 +50,7 @@ MPORT_PUBLIC_API int mport_update_primative(mportInstance *mport, const char *fi
   if (mport_bundle_read_prep_for_install(mport, bundle) != MPORT_OK)
     RETURN_CURRENT_ERROR;
   
-  if (mport_get_meta_from_stub(mport, &pkgs) != MPORT_OK)
+  if (mport_pkgmeta_read_stub(mport, &pkgs) != MPORT_OK)
     RETURN_CURRENT_ERROR;
   
   for (i=0; *(pkgs + i) != NULL; i++) {

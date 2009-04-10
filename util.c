@@ -38,63 +38,6 @@
 #include "mport.h"
 #include "mport_private.h"
 
-/* Package meta-data creation and destruction */
-MPORT_PUBLIC_API mportPackageMeta* mport_packagemeta_new() 
-{
-  /* we use calloc so any pointers that aren't set are NULL.
-     (calloc zero's out the memory region. */
-  return (mportPackageMeta *)calloc(1, sizeof(mportPackageMeta));
-}
-
-MPORT_PUBLIC_API void mport_packagemeta_free(mportPackageMeta *pack)
-{
-  int i;
-  
-  free(pack->pkg_filename);
-  free(pack->name);
-  free(pack->version);
-  free(pack->lang);
-  free(pack->comment);
-  free(pack->sourcedir);
-  free(pack->desc);
-  free(pack->prefix);
-  free(pack->mtree);
-  free(pack->origin);
-  free(pack->conflicts);
-  free(pack->pkginstall);
-  free(pack->pkgdeinstall);
-  free(pack->pkgmessage);
-  
-  i = 0;
-  if (pack->conflicts != NULL)  {
-    while (pack->conflicts[i] != NULL)
-      free(pack->conflicts[i++]);
-  }
-
-  free(pack->conflicts);
-  
-  i = 0;
-  if (pack->depends != NULL) {
-    while (pack->depends[i] != NULL) {
-      free(pack->depends[i++]);
-    }
-  }
-  
-  free(pack->depends);
-
-  free(pack);
-}
-
-/* free a vector of mportPackageMeta pointers */
-MPORT_PUBLIC_API void mport_packagemeta_vec_free(mportPackageMeta **vec)
-{
-  int i;
-  for (i=0; *(vec + i) != NULL; i++) {
-    mport_packagemeta_free(*(vec + i));
-  }
-  
-  free(vec);
-}
 
 /* a wrapper around chdir, to work with our error system */
 int mport_chdir(mportInstance *mport, const char *dir)

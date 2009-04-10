@@ -77,7 +77,7 @@ static int make_backup_bundle(mportInstance *mport, mportPackageMeta *pkg)
   mportAssetList *alist;
   int ret;
   
-  if (mport_get_assetlist_from_master(mport, pkg, &alist) != MPORT_OK)
+  if (mport_pkgmeta_get_assetlist(mport, pkg, &alist) != MPORT_OK)
     RETURN_CURRENT_ERROR;
   
   pkg->sourcedir = strdup("");
