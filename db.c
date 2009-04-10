@@ -174,7 +174,7 @@ int mport_generate_master_schema(sqlite3 *db)
   RUN_SQL(db, "CREATE INDEX IF NOT EXISTS assets_pkg ON assets (pkg)");
   RUN_SQL(db, "CREATE INDEX IF NOT EXISTS assets_data ON assets (data)");
   
-  RUN_SQL(db, "CREATE TABLE IF NOT EXISTS categories (pkg text NOT NULL, category text NOT NULL");
+  RUN_SQL(db, "CREATE TABLE IF NOT EXISTS categories (pkg text NOT NULL, category text NOT NULL)");
   RUN_SQL(db, "CREATE INDEX IF NOT EXISTS categories_pkg ON categories (pkg, category)");
   return MPORT_OK;
 }
