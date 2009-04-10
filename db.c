@@ -150,7 +150,7 @@ int mport_generate_stub_schema(sqlite3 *db)
   RUN_SQL(db, "CREATE TABLE meta      (field text NOT NULL, value text NOT NULL)");
   RUN_SQL(db, "INSERT INTO meta VALUES (\"bundle_format_version\", " MPORT_BUNDLE_VERSION_STR ")");
   RUN_SQL(db, "CREATE TABLE assets    (pkg text not NULL, type int NOT NULL, data text, checksum text)");
-  RUN_SQL(db, "CREATE TABLE packages  (pkg text NOT NULL, version text NOT NULL, origin text NOT NULL, lang text, options text, date int NOT NULL, prefix text NOT NULL, comment text)");
+  RUN_SQL(db, "CREATE TABLE packages  (pkg text NOT NULL, version text NOT NULL, origin text NOT NULL, lang text, options text, prefix text NOT NULL, comment text)");
   RUN_SQL(db, "CREATE TABLE conflicts (pkg text NOT NULL, conflict_pkg text NOT NULL, conflict_version text NOT NULL)");
   RUN_SQL(db, "CREATE TABLE depends   (pkg text NOT NULL, depend_pkgname text NOT NULL, depend_pkgversion text, depend_port text NOT NULL)");
 
@@ -159,13 +159,16 @@ int mport_generate_stub_schema(sqlite3 *db)
 
 int mport_generate_master_schema(sqlite3 *db) 
 {
-  RUN_SQL(db, "CREATE TABLE IF NOT EXISTS packages (pkg text NOT NULL, version text NOT NULL, origin text NOT NULL, prefix text NOT NULL, lang text, options text, date int, status text default 'dirty', comment text)");
+  RUN_SQL(db, "CREATE TABLE IF NOT EXISTS packages (pkg text NOT NULL, version text NOT NULL, origin text NOT NULL, prefix text NOT NULL, lang text, options text, status text default 'dirty', comment text)");
   RUN_SQL(db, "CREATE UNIQUE INDEX IF NOT EXISTS packages_pkg ON packages (pkg)");
   RUN_SQL(db, "CREATE INDEX IF NOT EXISTS packages_origin ON packages (origin)");
 
   RUN_SQL(db, "CREATE TABLE IF NOT EXISTS depends (pkg text NOT NULL, depend_pkgname text NOT NULL, depend_pkgversion text, depend_port text NOT NULL)");
   RUN_SQL(db, "CREATE INDEX IF NOT EXISTS depends_pkg ON depends (pkg)");
   RUN_SQL(db, "CREATE INDEX IF NOT EXISTS depends_dependpkgname ON depends (depend_pkgname)");
+
+  RUN_SQL(db, "CREATE TABLE IF NOT EXISTS log (pkg text NOT NULL, version text NOT NULL, date int NOT NULL, msg text NOT NULL)");
+  RUN_SQL(db, "CREATE INDEX IF NOT EXISTS log_pkg ON log (pkg, version)");
 
   RUN_SQL(db, "CREATE TABLE IF NOT EXISTS assets (pkg text NOT NULL, type int NOT NULL, data text, checksum text)");
   RUN_SQL(db, "CREATE INDEX IF NOT EXISTS assets_pkg ON assets (pkg)");

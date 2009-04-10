@@ -29,6 +29,8 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <sys/time.h>
+#include <errno.h>
 #include "mport.h"
 #include "mport_private.h"
 
@@ -308,6 +310,22 @@ int mport_pkgmeta_get_assetlist(mportInstance *mport, mportPackageMeta *pkg, mpo
   
   sqlite3_finalize(stmt);
   return MPORT_OK;
+}
+
+
+/* mport_pkgmeta_logevent(mport, pkg, "Hi there!");
+ *
+ * Create an entry in the log table for this pkg (and version), using the given message.
+ */
+int mport_pkgmeta_logevent(mportInstance *mport, mportPackageMeta *pkg, const char *msg) 
+{
+  struct timespec now;
+  
+  if (clock_gettime(CLOCK_REALTIME, &now) != 0) {
+    RETURN_ERROR(MPORT_ERR_SYSCALL_FAILED, strerror(errno));
+  }
+          
+  return mport_db_do(mport->db, "INSERT INTO log (pkg, version, date, msg) VALUES (%Q,%Q,%i,%Q)", pkg->name, pkg->version, now.tv_sec, msg);
 }
 
 

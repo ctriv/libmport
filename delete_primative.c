@@ -189,6 +189,8 @@ MPORT_PUBLIC_API int mport_delete_primative(mportInstance *mport, mportPackageMe
 
   
   (mport->progress_free_cb)();
+
+  mport_pkgmeta_logevent(mport, pack, "Package deleted");
   
   return MPORT_OK;  
 } 

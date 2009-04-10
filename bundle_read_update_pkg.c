@@ -39,6 +39,8 @@ static int install_backup_bundle(mportInstance *mport, mportPackageMeta *pkg);
 int mport_bundle_read_update_pkg(mportInstance *mport, mportBundleRead *bundle, mportPackageMeta *pkg)
 {
   char tmpfile[] = "/tmp/mport.XXXXXXXX";
+
+  mport_pkgmeta_logevent(mport, pkg, "Begining update");
   
   if (mktemp(tmpfile) == NULL) {
     RETURN_ERRORX(MPORT_ERR_SYSCALL_FAILED, "Couldn't make tmp file: %s", strerror(errno));

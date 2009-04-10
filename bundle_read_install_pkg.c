@@ -226,6 +226,8 @@ static int do_actual_install(mportInstance *mport, mportBundleRead *bundle, mpor
   
   if (mport_db_do(db, "UPDATE packages SET status='clean' WHERE pkg=%Q", pkg->name) != MPORT_OK) 
     goto ERROR;
+
+  mport_pkgmeta_logevent(mport, pkg, "Installed");
     
   (mport->progress_free_cb)();
   (void)mport_chdir(NULL, orig_cwd);
