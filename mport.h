@@ -111,6 +111,7 @@ typedef struct {
   char *mtree;
   char *origin;
   char **conflicts;
+  char **categories;
   char *pkginstall;
   char *pkgdeinstall;
   char *pkgmessage;

@@ -82,6 +82,16 @@ MPORT_PUBLIC_API void mport_pkgmeta_free(mportPackageMeta *pack)
   
   free(pack->depends);
 
+  i = 0;
+  if (pack->categories != NULL) {
+    while (pack->categories[i] != NULL) {
+      free(pack->categories[i++]);
+    }
+  }
+  
+  free(pack->categories);
+
+
   free(pack);
 }
 
