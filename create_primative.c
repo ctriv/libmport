@@ -47,6 +47,7 @@ static int insert_assetlist(sqlite3 *, mportAssetList *, mportPackageMeta *);
 static int insert_meta(sqlite3 *, mportPackageMeta *);
 static int insert_depends(sqlite3 *, mportPackageMeta *);
 static int insert_conflicts(sqlite3 *, mportPackageMeta *);
+static int insert_categories(sqlite3 *, mportPackageMeta *);
 static int archive_files(mportAssetList *, mportPackageMeta *, const char *);
 static int archive_metafiles(mportBundleWrite *, mportPackageMeta *);
 static int archive_assetlistfiles(mportBundleWrite *, mportPackageMeta *, mportAssetList *);
@@ -182,7 +183,6 @@ static int insert_meta(sqlite3 *db, mportPackageMeta *pack)
 {
   sqlite3_stmt *stmnt;
   const char *rest  = 0;
-  int ret;
   
   char sql[]  = "INSERT INTO packages (pkg, version, origin, lang, prefix, comment) VALUES (?,?,?,?,?,?)";
   
@@ -214,15 +214,49 @@ static int insert_meta(sqlite3 *db, mportPackageMeta *pack)
   
   sqlite3_finalize(stmnt);  
 
-  /* insert depends and conflicts */
-  if ((ret = insert_depends(db, pack)) != MPORT_OK)
-    return ret;  
-    
-  if ((ret = insert_conflicts(db, pack)) != MPORT_OK)
-    return ret;
-  
+
+  if (insert_depends(db, pack) != MPORT_OK)
+    RETURN_CURRENT_ERROR;        
+  if (insert_conflicts(db, pack) != MPORT_OK)
+    RETURN_CURRENT_ERROR;
+  if (insert_categories(db, pack) != MPORT_OK)
+    RETURN_CURRENT_ERROR;
+
   return MPORT_OK;
 }
+
+
+static int insert_categories(sqlite3 *db, mportPackageMeta *pkg)
+{
+  sqlite3_stmt *stmt;
+  
+  int i = 0;
+  
+  if (pkg->categories == NULL)
+    return MPORT_OK; // or should this be an error?
+  
+  while (pkg->categories[i] != NULL) {
+    if (mport_db_prepare(db, &stmt, "INSERT INTO categories (pkg, category) VALUES (?,?)") != MPORT_OK)
+      RETURN_CURRENT_ERROR;
+  
+    if (sqlite3_bind_text(stmt, 1, pkg->name, -1, SQLITE_STATIC) != SQLITE_OK) {
+      RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
+    }
+    if (sqlite3_bind_text(stmt, 2, pkg->categories[i], -1, SQLITE_STATIC) != SQLITE_OK) {
+      RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
+    }
+
+    if (sqlite3_step(stmt) != SQLITE_DONE) {
+      RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
+    }
+    sqlite3_reset(stmt);
+    i++;
+  }
+  
+  sqlite3_finalize(stmt);
+  return MPORT_OK;
+}
+    
 
 
 static int insert_conflicts(sqlite3 *db, mportPackageMeta *pack) 
