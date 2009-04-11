@@ -50,37 +50,14 @@ MPORT_PUBLIC_API void mport_pkgmeta_free(mportPackageMeta *pack)
 {
   int i;
   
-  free(pack->pkg_filename);
   free(pack->name);
   free(pack->version);
   free(pack->lang);
   free(pack->comment);
-  free(pack->sourcedir);
   free(pack->desc);
   free(pack->prefix);
-  free(pack->mtree);
   free(pack->origin);
-  free(pack->conflicts);
-  free(pack->pkginstall);
-  free(pack->pkgdeinstall);
-  free(pack->pkgmessage);
   
-  i = 0;
-  if (pack->conflicts != NULL)  {
-    while (pack->conflicts[i] != NULL)
-      free(pack->conflicts[i++]);
-  }
-
-  free(pack->conflicts);
-  
-  i = 0;
-  if (pack->depends != NULL) {
-    while (pack->depends[i] != NULL) {
-      free(pack->depends[i++]);
-    }
-  }
-  
-  free(pack->depends);
 
   i = 0;
   if (pack->categories != NULL) {

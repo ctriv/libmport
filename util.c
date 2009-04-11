@@ -39,6 +39,46 @@
 #include "mport_private.h"
 
 
+/* these two aren't really utilities, but there's no better place to put them */
+MPORT_PUBLIC_API mportCreateExtras* mport_createextras_new()
+{
+  return (mportCreateExtras*)calloc(1, sizeof(mportCreateExtras));
+}
+
+MPORT_PUBLIC_API void mport_createextras_free(mportCreateExtras *extra)
+{
+  int i;
+  
+  free(extra->pkg_filename);
+  free(extra->sourcedir);
+  free(extra->mtree);
+  free(extra->conflicts);
+  free(extra->pkginstall);
+  free(extra->pkgdeinstall);
+  free(extra->pkgmessage);
+
+  i = 0;
+  if (extra->conflicts != NULL)  {
+    while (extra->conflicts[i] != NULL)
+      free(extra->conflicts[i++]);
+  }
+
+  free(extra->conflicts);
+  
+  i = 0;
+  if (extra->depends != NULL) {
+    while (extra->depends[i] != NULL) {
+      free(extra->depends[i++]);
+    }
+  }
+  
+  free(extra->depends);
+
+  
+  free(extra);
+}
+
+
 /* a wrapper around chdir, to work with our error system */
 int mport_chdir(mportInstance *mport, const char *dir)
 {

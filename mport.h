@@ -98,24 +98,17 @@ int mport_parse_plistfile(FILE *, mportAssetList *);
 /* Package Meta-data structure */
 
 typedef struct {
-  char *pkg_filename;
   char *name;
   char *version;
   char *lang;
   char *options;
   char *comment;
-  char *sourcedir;
   char *desc;
   char *prefix;
-  char **depends;
-  char *mtree;
   char *origin;
-  char **conflicts;
   char **categories;
-  char *pkginstall;
-  char *pkgdeinstall;
-  char *pkgmessage;
 } mportPackageMeta;  
+
 
 mportPackageMeta * mport_pkgmeta_new(void);
 void mport_pkgmeta_free(mportPackageMeta *);
@@ -124,8 +117,23 @@ int mport_pkgmeta_search_master(mportInstance *, mportPackageMeta ***, const cha
 int mport_pkgmeta_get_downdepends(mportInstance *, mportPackageMeta *);
 
 
+
+typedef struct {
+  char *pkg_filename;
+  char *sourcedir;
+  char **depends;
+  char *mtree;
+  char **conflicts;
+  char *pkginstall;
+  char *pkgdeinstall;
+  char *pkgmessage;
+} mportCreateExtras;  
+
+mportCreateExtras * mport_createextras_new(void);
+void mport_createextras_free(mportCreateExtras *);
+
 /* Package creation */
-int mport_create_primative(mportAssetList *, mportPackageMeta *);
+int mport_create_primative(mportAssetList *, mportPackageMeta *, mportCreateExtras *);
 
 /* Merge primative */
 int mport_merge_primative(const char **, const char *);

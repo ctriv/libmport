@@ -43,18 +43,18 @@
 #include "mport_private.h"
 
 static int create_stub_db(sqlite3 **);
-static int insert_assetlist(sqlite3 *, mportAssetList *, mportPackageMeta *);
-static int insert_meta(sqlite3 *, mportPackageMeta *);
-static int insert_depends(sqlite3 *, mportPackageMeta *);
-static int insert_conflicts(sqlite3 *, mportPackageMeta *);
+static int insert_assetlist(sqlite3 *, mportAssetList *, mportPackageMeta *, mportCreateExtras *);
+static int insert_meta(sqlite3 *, mportPackageMeta *, mportCreateExtras *);
+static int insert_depends(sqlite3 *, mportPackageMeta *, mportCreateExtras *);
+static int insert_conflicts(sqlite3 *, mportPackageMeta *, mportCreateExtras *);
 static int insert_categories(sqlite3 *, mportPackageMeta *);
-static int archive_files(mportAssetList *, mportPackageMeta *, const char *);
-static int archive_metafiles(mportBundleWrite *, mportPackageMeta *);
-static int archive_assetlistfiles(mportBundleWrite *, mportPackageMeta *, mportAssetList *);
+static int archive_files(mportAssetList *, mportPackageMeta *, mportCreateExtras *, const char *);
+static int archive_metafiles(mportBundleWrite *, mportPackageMeta *, mportCreateExtras *);
+static int archive_assetlistfiles(mportBundleWrite *, mportPackageMeta *, mportCreateExtras *, mportAssetList *);
 static int clean_up(const char *);
 
 
-MPORT_PUBLIC_API int mport_create_primative(mportAssetList *assetlist, mportPackageMeta *pack)
+MPORT_PUBLIC_API int mport_create_primative(mportAssetList *assetlist, mportPackageMeta *pack, mportCreateExtras *extra)
 {
   
   int ret;
@@ -75,10 +75,10 @@ MPORT_PUBLIC_API int mport_create_primative(mportAssetList *assetlist, mportPack
   if ((ret = create_stub_db(&db)) != MPORT_OK)
     goto CLEANUP;
 
-  if ((ret = insert_assetlist(db, assetlist, pack)) != MPORT_OK)
+  if ((ret = insert_assetlist(db, assetlist, pack, extra)) != MPORT_OK)
     goto CLEANUP;
 
-  if ((ret = insert_meta(db, pack)) != MPORT_OK)
+  if ((ret = insert_meta(db, pack, extra)) != MPORT_OK)
     goto CLEANUP;
   
   if (sqlite3_close(db) != SQLITE_OK) {
@@ -86,7 +86,7 @@ MPORT_PUBLIC_API int mport_create_primative(mportAssetList *assetlist, mportPack
     goto CLEANUP;
   }
     
-  if ((ret = archive_files(assetlist, pack, tmpdir)) != MPORT_OK)
+  if ((ret = archive_files(assetlist, pack, extra, tmpdir)) != MPORT_OK)
     goto CLEANUP;
   
   CLEANUP:  
@@ -106,7 +106,7 @@ static int create_stub_db(sqlite3 **db)
   return mport_generate_stub_schema(*db);
 }
 
-static int insert_assetlist(sqlite3 *db, mportAssetList *assetlist, mportPackageMeta *pack)
+static int insert_assetlist(sqlite3 *db, mportAssetList *assetlist, mportPackageMeta *pack, mportCreateExtras *extra)
 {
   mportAssetListEntry *e;
   sqlite3_stmt *stmnt;
@@ -116,7 +116,7 @@ static int insert_assetlist(sqlite3 *db, mportAssetList *assetlist, mportPackage
   char cwd[FILENAME_MAX];
   struct stat st;
 
-  strlcpy(cwd, pack->sourcedir, FILENAME_MAX);
+  strlcpy(cwd, extra->sourcedir, FILENAME_MAX);
   strlcat(cwd, pack->prefix, FILENAME_MAX);
   
   if (mport_db_prepare(db, &stmnt, sql) != MPORT_OK) 
@@ -127,7 +127,7 @@ static int insert_assetlist(sqlite3 *db, mportAssetList *assetlist, mportPackage
       continue;
   
     if (e->type == ASSET_CWD) {
-      strlcpy(cwd, pack->sourcedir, FILENAME_MAX);
+      strlcpy(cwd, extra->sourcedir, FILENAME_MAX);
       if (e->data == NULL) {
         strlcat(cwd, pack->prefix, FILENAME_MAX);
       } else {
@@ -179,7 +179,7 @@ static int insert_assetlist(sqlite3 *db, mportAssetList *assetlist, mportPackage
   return MPORT_OK;
 }     
 
-static int insert_meta(sqlite3 *db, mportPackageMeta *pack)
+static int insert_meta(sqlite3 *db, mportPackageMeta *pack, mportCreateExtras *extra)
 {
   sqlite3_stmt *stmnt;
   const char *rest  = 0;
@@ -215,9 +215,9 @@ static int insert_meta(sqlite3 *db, mportPackageMeta *pack)
   sqlite3_finalize(stmnt);  
 
 
-  if (insert_depends(db, pack) != MPORT_OK)
+  if (insert_depends(db, pack, extra) != MPORT_OK)
     RETURN_CURRENT_ERROR;        
-  if (insert_conflicts(db, pack) != MPORT_OK)
+  if (insert_conflicts(db, pack, extra) != MPORT_OK)
     RETURN_CURRENT_ERROR;
   if (insert_categories(db, pack) != MPORT_OK)
     RETURN_CURRENT_ERROR;
@@ -259,10 +259,10 @@ static int insert_categories(sqlite3 *db, mportPackageMeta *pkg)
     
 
 
-static int insert_conflicts(sqlite3 *db, mportPackageMeta *pack) 
+static int insert_conflicts(sqlite3 *db, mportPackageMeta *pack, mportCreateExtras *extra) 
 {
   sqlite3_stmt *stmnt;
-  char **conflict  = pack->conflicts;
+  char **conflict  = extra->conflicts;
   char *version;
   
   /* we're done if there are no conflicts to record. */
@@ -307,10 +307,10 @@ static int insert_conflicts(sqlite3 *db, mportPackageMeta *pack)
     
   
 
-static int insert_depends(sqlite3 *db, mportPackageMeta *pack) 
+static int insert_depends(sqlite3 *db, mportPackageMeta *pack, mportCreateExtras *extra) 
 {
   sqlite3_stmt *stmnt;
-  char **depend    = pack->depends;
+  char **depend    = extra->depends;
   char *pkgversion;
   char *port;
   
@@ -371,14 +371,14 @@ static int insert_depends(sqlite3 *db, mportPackageMeta *pack)
 
 
 
-static int archive_files(mportAssetList *assetlist, mportPackageMeta *pack, const char *tmpdir)
+static int archive_files(mportAssetList *assetlist, mportPackageMeta *pack, mportCreateExtras *extra, const char *tmpdir)
 {
   mportBundleWrite *bundle;
   char filename[FILENAME_MAX];
   
   bundle = mport_bundle_write_new();
   
-  if (mport_bundle_write_init(bundle, pack->pkg_filename) != MPORT_OK)
+  if (mport_bundle_write_init(bundle, extra->pkg_filename) != MPORT_OK)
     RETURN_CURRENT_ERROR;
 
   /* First step - +CONTENTS.db ALWAYS GOES FIRST!!! */        
@@ -387,11 +387,11 @@ static int archive_files(mportAssetList *assetlist, mportPackageMeta *pack, cons
     RETURN_CURRENT_ERROR;
     
   /* second step - the meta files */
-  if (archive_metafiles(bundle, pack) != MPORT_OK)
+  if (archive_metafiles(bundle, pack, extra) != MPORT_OK)
     RETURN_CURRENT_ERROR;
   
   /* last step - the real files from the assetlist */
-  if (archive_assetlistfiles(bundle, pack, assetlist) != MPORT_OK)
+  if (archive_assetlistfiles(bundle, pack, extra, assetlist) != MPORT_OK)
     RETURN_CURRENT_ERROR;
     
   mport_bundle_write_finish(bundle);
@@ -400,40 +400,40 @@ static int archive_files(mportAssetList *assetlist, mportPackageMeta *pack, cons
 }
 
 
-static int archive_metafiles(mportBundleWrite *bundle, mportPackageMeta *pack)
+static int archive_metafiles(mportBundleWrite *bundle, mportPackageMeta *pack, mportCreateExtras *extra)
 {
   char filename[FILENAME_MAX], dir[FILENAME_MAX];
   
   (void)snprintf(dir, FILENAME_MAX, "%s/%s-%s", MPORT_STUB_INFRA_DIR, pack->name, pack->version);
 
-  if (pack->mtree != NULL && mport_file_exists(pack->mtree)) {
+  if (extra->mtree != NULL && mport_file_exists(extra->mtree)) {
     (void)snprintf(filename, FILENAME_MAX, "%s/%s", dir, MPORT_MTREE_FILE);
-    if (mport_bundle_write_add_file(bundle, pack->mtree, filename) != MPORT_OK)
+    if (mport_bundle_write_add_file(bundle, extra->mtree, filename) != MPORT_OK)
       RETURN_CURRENT_ERROR;
   }
   
-  if (pack->pkginstall != NULL && mport_file_exists(pack->pkginstall)) {
+  if (extra->pkginstall != NULL && mport_file_exists(extra->pkginstall)) {
     (void)snprintf(filename, FILENAME_MAX, "%s/%s", dir, MPORT_INSTALL_FILE);
-    if (mport_bundle_write_add_file(bundle, pack->pkginstall, filename) != MPORT_OK)
+    if (mport_bundle_write_add_file(bundle, extra->pkginstall, filename) != MPORT_OK)
       RETURN_CURRENT_ERROR;
   }
   
-  if (pack->pkgdeinstall != NULL && mport_file_exists(pack->pkgdeinstall)) {
+  if (extra->pkgdeinstall != NULL && mport_file_exists(extra->pkgdeinstall)) {
     (void)snprintf(filename, FILENAME_MAX, "%s/%s", dir, MPORT_DEINSTALL_FILE);
-    if (mport_bundle_write_add_file(bundle, pack->pkgdeinstall, filename) != MPORT_OK)
+    if (mport_bundle_write_add_file(bundle, extra->pkgdeinstall, filename) != MPORT_OK)
       RETURN_CURRENT_ERROR;
   }
   
-  if (pack->pkgmessage != NULL && mport_file_exists(pack->pkgmessage)) {
+  if (extra->pkgmessage != NULL && mport_file_exists(extra->pkgmessage)) {
     (void)snprintf(filename, FILENAME_MAX, "%s/%s", dir, MPORT_MESSAGE_FILE);
-    if (mport_bundle_write_add_file(bundle, pack->pkgmessage, filename) != MPORT_OK)
+    if (mport_bundle_write_add_file(bundle, extra->pkgmessage, filename) != MPORT_OK)
       RETURN_CURRENT_ERROR;
   }
   
   return MPORT_OK;
 }
 
-static int archive_assetlistfiles(mportBundleWrite *bundle, mportPackageMeta *pack, mportAssetList *assetlist)
+static int archive_assetlistfiles(mportBundleWrite *bundle, mportPackageMeta *pack, mportCreateExtras *extra, mportAssetList *assetlist)
 {
   mportAssetListEntry *e;
   char filename[FILENAME_MAX];
@@ -456,7 +456,7 @@ static int archive_assetlistfiles(mportBundleWrite *bundle, mportPackageMeta *pa
       continue;
     }
     
-    (void)snprintf(filename, FILENAME_MAX, "%s/%s/%s", pack->sourcedir, cwd, e->data);
+    (void)snprintf(filename, FILENAME_MAX, "%s/%s/%s", extra->sourcedir, cwd, e->data);
     
     if (mport_bundle_write_add_file(bundle, filename, e->data) != MPORT_OK)
       RETURN_CURRENT_ERROR;
