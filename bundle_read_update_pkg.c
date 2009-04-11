@@ -33,8 +33,9 @@
 #include <errno.h>
 #include <stdlib.h>
 
-static int make_backup_bundle(mportInstance *, mportPackageMeta *);
-static int install_backup_bundle(mportInstance *mport, mportPackageMeta *pkg);
+static int make_backup_bundle(mportInstance *, mportPackageMeta *, char *);
+static int install_backup_bundle(mportInstance *, mportPackageMeta *, char *);
+static int build_create_extras(mportInstance *, mportPackageMeta *, char *, mportCreateExtras **);
 
 int mport_bundle_read_update_pkg(mportInstance *mport, mportBundleRead *bundle, mportPackageMeta *pkg)
 {
@@ -48,13 +49,8 @@ int mport_bundle_read_update_pkg(mportInstance *mport, mportBundleRead *bundle, 
   }
   
   close(fd);
-    
-  /* we have to make a copy of this in the heap, because something might free this later on */
-  if ((pkg->pkg_filename = strdup(tmpfile)) == NULL)
-    return MPORT_ERR_NO_MEM;
-  
-  if (make_backup_bundle(mport, pkg) != MPORT_OK) {
-    free(pkg->pkg_filename);
+
+  if (make_backup_bundle(mport, pkg, tmpfile) != MPORT_OK) {
     RETURN_CURRENT_ERROR;
   }
   
@@ -64,43 +60,57 @@ int mport_bundle_read_update_pkg(mportInstance *mport, mportBundleRead *bundle, 
         (mport_bundle_read_install_pkg(mport, bundle, pkg) != MPORT_OK)
   ) 
   {
-    install_backup_bundle(mport, pkg);
-    free(pkg->pkg_filename);
+    install_backup_bundle(mport, pkg, tmpfile);
     RETURN_CURRENT_ERROR;
   }           
   
   /* if we can't delete the tmpfile, just move on. */
   (void)mport_rmtree(tmpfile);
-  free(pkg->pkg_filename); 
   
   return MPORT_OK;    
 }
   
   
-static int make_backup_bundle(mportInstance *mport, mportPackageMeta *pkg)
+static int make_backup_bundle(mportInstance *mport, mportPackageMeta *pkg, char *tmpfile)
 {
   mportAssetList *alist;
+  mportCreateExtras *extra;
   int ret;
   
   if (mport_pkgmeta_get_assetlist(mport, pkg, &alist) != MPORT_OK)
     RETURN_CURRENT_ERROR;
-  
-  pkg->sourcedir = strdup("");
-  
-  ret = mport_create_primative(alist, pkg);
+
+  if (build_create_extras(mport, pkg, tmpfile, &extra) != MPORT_OK) 
+    RETURN_CURRENT_ERROR;
+ 
+  ret = mport_create_primative(alist, pkg, extra);
  
   mport_assetlist_free(alist);
-  free(pkg->sourcedir);
+  mport_createextras_free(extra);
 
   return ret;
 }        
 
 
-static int install_backup_bundle(mportInstance *mport, mportPackageMeta *pkg) 
+static int install_backup_bundle(mportInstance *mport, mportPackageMeta *pkg, char *filename) 
 {
   /* at some point we might want to look into making this more forceful, but
    * this will do for the moment.  Wrap in a function for this future. */
   
-  return mport_install_primative(mport, pkg->pkg_filename, NULL);
+  return mport_install_primative(mport, filename, NULL);
 }
 
+
+
+static int build_create_extras(mportInstance *mport, mportPackageMeta *pkg, char *tmpfile, mportCreateExtras **extra_p)
+{
+  mportCreateExtras *extra;
+  
+  extra = mport_createextras_new();
+  
+  *extra_p = extra;
+  
+  extra->pkg_filename = tmpfile;
+  extra->sourcedir = strdup("");
+  
+}
