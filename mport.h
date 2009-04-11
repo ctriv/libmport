@@ -114,7 +114,7 @@ mportPackageMeta * mport_pkgmeta_new(void);
 void mport_pkgmeta_free(mportPackageMeta *);
 void mport_pkgmeta_vec_free(mportPackageMeta **);
 int mport_pkgmeta_search_master(mportInstance *, mportPackageMeta ***, const char *, ...);
-int mport_pkgmeta_get_downdepends(mportInstance *, mportPackageMeta *);
+int mport_pkgmeta_get_downdepends(mportInstance *, mportPackageMeta *, mportPackageMeta ***);
 
 
 

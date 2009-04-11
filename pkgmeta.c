@@ -194,22 +194,17 @@ MPORT_PUBLIC_API int mport_pkgmeta_search_master(mportInstance *mport, mportPack
 
 
 
-/* mport_pkgmeta_get_downdepends(mportInstance *mport, mportPackageMeta *pkg)
+/* mport_pkgmeta_get_downdepends(mportInstance *mport, mportPackageMeta *pkg, mportPackageMeta ***pkg_vec)
  * 
  * Populate the depends of a pkg using the data in the master database.  
  */
-MPORT_PUBLIC_API int mport_pkgmeta_get_downdepends(mportInstance *mport, mportPackageMeta *pkg)
+MPORT_PUBLIC_API int mport_pkgmeta_get_downdepends(mportInstance *mport, mportPackageMeta *pkg, mportPackageMeta ***pkg_vec_p)
 {
   int count = 0;
   int ret;
-  int i = 0;
   sqlite3_stmt *stmt;
   
   /* if the depends are set, there's nothing for us to do */
-  
-  if (pkg->depends != NULL) 
-    return MPORT_OK;
-    
   if (mport_db_prepare(mport->db, &stmt, "SELECT COUNT(*) FROM depends WHERE pkg=%Q", pkg->name) != MPORT_OK)
     RETURN_CURRENT_ERROR;
     
@@ -223,34 +218,15 @@ MPORT_PUBLIC_API int mport_pkgmeta_get_downdepends(mportInstance *mport, mportPa
   
   if (count == 0) 
     return MPORT_OK;    /* XXX is there some way to optimize repeated lookups away? */
-  
-  pkg->depends = (char **)calloc((1+count), sizeof(char **));
-  
-  if (mport_db_prepare(mport->db, &stmt, "SELECT depend_pkgname FROM depends WHERE pkg=%Q", pkg->name) != MPORT_OK) 
+
+  if (mport_db_prepare(mport->db, &stmt, "SELECT packages.pkg, packages.version, packages.origin, packages.lang, packages.prefix, packages.comment FROM packages,depends WHERE packages.pkg=depends.depend_pkgname AND depends.pkg=%Q", pkg->name) != MPORT_OK) 
     RETURN_CURRENT_ERROR;
 
-  while (1) {
-    ret = sqlite3_step(stmt);
-    
-    if (ret == SQLITE_DONE) {
-      break;
-    } else if (ret == SQLITE_ROW) {
-      pkg->depends[i] = strdup(sqlite3_column_text(stmt, 0));
-      i++;
-    } else {
-      sqlite3_finalize(stmt);
-      RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(mport->db));
-    } 
-  } 
-  
-  /* pad the last cell in the array with null */
-  pkg->depends[i] = NULL;
-  
+  ret = populate_vec_from_stmt(pkg_vec_p, count, mport->db, stmt);
+ 
   sqlite3_finalize(stmt);
-  return MPORT_OK; 
+  return ret; 
 }  
-
-
 
 
 int mport_pkgmeta_get_assetlist(mportInstance *mport, mportPackageMeta *pkg, mportAssetList **alist_p)
