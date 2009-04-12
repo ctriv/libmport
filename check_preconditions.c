@@ -33,34 +33,7 @@
 static int check_if_installed(sqlite3 *, mportPackageMeta *);
 static int check_conflicts(sqlite3 *, mportPackageMeta *);
 static int check_depends(mportInstance *mport, mportPackageMeta *);
-
-
-/* check to see if an older version of a package is installed. */
-int mport_older_pkg_is_installed(mportInstance *mport, mportPackageMeta *pkg)
-{
-  sqlite3_stmt *stmt;
-  int ret;
-    
-  if (mport_db_prepare(mport->db, &stmt, "SELECT 1 FROM packages WHERE pkg=%Q and mport_version_cmp(version, %Q) < 0", pkg->name, pkg->version) != MPORT_OK)
-    RETURN_CURRENT_ERROR;
-  
-  switch (sqlite3_step(stmt)) {
-    case SQLITE_ROW:
-      ret = 1;
-      break;
-    case SQLITE_DONE:
-      ret = 0;
-      break;
-    default:
-      /* some sort of error has occured, given the way where handling returns here, how do we report it? */
-      (void)fprintf(stderr, "sqlite error: %s\n", sqlite3_errmsg(mport->db));
-      ret = 0;
-  }
-  
-  sqlite3_finalize(stmt);
-  return ret;
-}
-
+static int check_if_older_installed(mportInstance *, mportPackageMeta *);
 
 
 /* check to see if the package is already installed, if it has any
@@ -81,7 +54,15 @@ int mport_check_install_preconditions(mportInstance *mport, mportPackageMeta *pa
 
 int mport_check_update_preconditions(mportInstance *mport, mportPackageMeta *pack) 
 {
-  /* XXX WRITE ME */
+  if (
+    (check_if_older_installed(mport, pack) != MPORT_OK)
+                        ||
+    (check_conflicts(mport->db, pack) != MPORT_OK)
+                        ||
+    (check_depends(mport, pack) != MPORT_OK)
+  )
+      RETURN_CURRENT_ERROR;
+  
   return MPORT_OK;
 }
 
@@ -248,3 +229,27 @@ static int check_depends(mportInstance *mport, mportPackageMeta *pack)
   return MPORT_OK;    
 }  
 
+/* check to see if an older version of a package is installed. */
+static int check_if_older_installed(mportInstance *mport, mportPackageMeta *pkg)
+{
+  sqlite3_stmt *stmt;
+  int ret;
+    
+  if (mport_db_prepare(mport->db, &stmt, "SELECT 1 FROM packages WHERE pkg=%Q and mport_version_cmp(version, %Q) < 0", pkg->name, pkg->version) != MPORT_OK)
+    RETURN_CURRENT_ERROR;
+  
+  switch (sqlite3_step(stmt)) {
+    case SQLITE_ROW:
+      ret = MPORT_OK;
+      break;
+    case SQLITE_DONE:
+      ret = SET_ERRORX(MPORT_ERR_NOT_UPGRADABLE, "No older version of %s installed", pkg->name);
+      break;
+    default:
+      ret = SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(mport->db));
+      break;
+  }
+  
+  sqlite3_finalize(stmt);
+  return ret;
+}

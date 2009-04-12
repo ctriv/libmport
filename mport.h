@@ -175,7 +175,7 @@ const char * mport_err_string(void);
 #define MPORT_ERR_CHECKSUM_MISMATCH	15
 #define MPORT_ERR_UPWARDS_DEPENDS	16
 #define MPORT_ERR_MALFORMED_BUNDLE	17
-
+#define MPORT_ERR_NOT_UPGRADABLE	18
 
 
 /* Utils */

@@ -48,7 +48,6 @@ void mport_call_msg_cb(mportInstance *, const char *, ...);
 /* precondition checking */
 int mport_check_install_preconditions(mportInstance *, mportPackageMeta *);
 int mport_check_update_preconditions(mportInstance *, mportPackageMeta *);
-int mport_older_pkg_is_installed(mportInstance *, mportPackageMeta *);
 
 /* schema */
 int mport_generate_master_schema(sqlite3 *);
