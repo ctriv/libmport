@@ -242,20 +242,23 @@ static int do_actual_install(mportInstance *mport, mportBundleRead *bundle, mpor
 }           
 
 
+#define COPY_METAFILE(TYPE)	(void)snprintf(from, FILENAME_MAX, "%s/%s/%s-%s/%s", bundle->tmpdir, MPORT_STUB_INFRA_DIR, pkg->name, pkg->version, TYPE); \
+                                if (mport_file_exists(from)) { \
+                                  (void)snprintf(to, FILENAME_MAX, "%s%s/%s-%s/%s", mport->root, MPORT_INST_INFRA_DIR, pkg->name, pkg->version, TYPE); \
+                                  if (mport_mkdir(dirname(to)) != MPORT_OK) \
+                                    RETURN_CURRENT_ERROR; \
+                                  if (mport_copy_file(from, to) != MPORT_OK) \
+                                    RETURN_CURRENT_ERROR; \
+                                }
+                                
 static int do_post_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMeta *pkg)
 {
   char to[FILENAME_MAX], from[FILENAME_MAX];
-  (void)snprintf(from, FILENAME_MAX, "%s/%s/%s-%s/%s", bundle->tmpdir, MPORT_STUB_INFRA_DIR, pkg->name, pkg->version, MPORT_DEINSTALL_FILE);
-  
-  if (mport_file_exists(from)) {
-    (void)snprintf(to, FILENAME_MAX, "%s%s/%s-%s/%s", mport->root, MPORT_INST_INFRA_DIR, pkg->name, pkg->version, MPORT_DEINSTALL_FILE);
-    
-    if (mport_mkdir(dirname(to)) != MPORT_OK)
-      RETURN_CURRENT_ERROR;
-  
-    if (mport_copy_file(from, to) != MPORT_OK)
-      RETURN_CURRENT_ERROR;
-  }
+
+  COPY_METAFILE(MPORT_MTREE_FILE);
+  COPY_METAFILE(MPORT_INSTALL_FILE);
+  COPY_METAFILE(MPORT_DEINSTALL_FILE);
+  COPY_METAFILE(MPORT_MESSAGE_FILE);
 
   if (display_pkg_msg(mport, bundle, pkg) != MPORT_OK)
     RETURN_CURRENT_ERROR;

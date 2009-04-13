@@ -40,7 +40,7 @@
 /* allocate mem for a mportInstance */
 MPORT_PUBLIC_API mportInstance * mport_instance_new() 
 {
- return (mportInstance *)malloc(sizeof(mportInstance)); 
+  return (mportInstance *)malloc(sizeof(mportInstance)); 
 }
  
 

@@ -36,6 +36,8 @@
 static int make_backup_bundle(mportInstance *, mportPackageMeta *, char *);
 static int install_backup_bundle(mportInstance *, mportPackageMeta *, char *);
 static int build_create_extras(mportInstance *, mportPackageMeta *, char *, mportCreateExtras **);
+static int build_create_extras_copy_metafiles(mportInstance *, mportPackageMeta *, mportCreateExtras *);
+static int build_create_extras_depends(mportInstance *, mportPackageMeta *, mportCreateExtras *);
 
 int mport_bundle_read_update_pkg(mportInstance *mport, mportBundleRead *bundle, mportPackageMeta *pkg)
 {
@@ -107,10 +109,110 @@ static int build_create_extras(mportInstance *mport, mportPackageMeta *pkg, char
   mportCreateExtras *extra;
   
   extra = mport_createextras_new();
-  
   *extra_p = extra;
   
   extra->pkg_filename = tmpfile;
   extra->sourcedir = strdup("");
   
+  if (build_create_extras_depends(mport, pkg, extra) != MPORT_OK)
+    RETURN_CURRENT_ERROR;
+  
+  if (build_create_extras_copy_metafiles(mport, pkg, extra) != MPORT_OK)
+    RETURN_CURRENT_ERROR;
+
+  
+  return MPORT_OK;
+  
+}
+
+static int build_create_extras_copy_metafiles(mportInstance *mport, mportPackageMeta *pkg, mportCreateExtras *extra) 
+{
+  char file[FILENAME_MAX];
+  
+  if (snprintf(file, FILENAME_MAX, "%s/%s-%s/%s", MPORT_INST_INFRA_DIR, pkg->name, pkg->version, MPORT_MTREE_FILE) < 0)
+    return MPORT_ERR_NO_MEM;
+   
+  if (mport_file_exists(file)) {
+    if ((extra->mtree = strdup(file)) == NULL) 
+      return MPORT_ERR_NO_MEM;
+  }
+    
+  if (snprintf(file, FILENAME_MAX, "%s/%s-%s/%s", MPORT_INST_INFRA_DIR, pkg->name, pkg->version, MPORT_INSTALL_FILE) < 0)
+    return MPORT_ERR_NO_MEM;
+   
+  if (mport_file_exists(file)) {
+    if ((extra->pkginstall = strdup(file)) == NULL) 
+      return MPORT_ERR_NO_MEM;
+  }
+    
+  if (snprintf(file, FILENAME_MAX, "%s/%s-%s/%s", MPORT_INST_INFRA_DIR, pkg->name, pkg->version, MPORT_DEINSTALL_FILE) < 0)
+    return MPORT_ERR_NO_MEM;
+   
+  if (mport_file_exists(file)) {
+    if ((extra->pkgdeinstall = strdup(file)) == NULL) 
+      return MPORT_ERR_NO_MEM;
+  }
+    
+  if (snprintf(file, FILENAME_MAX, "%s/%s-%s/%s", MPORT_INST_INFRA_DIR, pkg->name, pkg->version, MPORT_MESSAGE_FILE) < 0)
+    return MPORT_ERR_NO_MEM;
+   
+  if (mport_file_exists(file)) {
+    if ((extra->pkgmessage = strdup(file)) == NULL) 
+      return MPORT_ERR_NO_MEM;
+  }
+
+  
+}
+
+static int build_create_extras_depends(mportInstance *mport, mportPackageMeta *pkg, mportCreateExtras *extra) 
+{
+  int count, ret, i;
+  sqlite3_stmt *stmt;
+  char *entry;
+  
+  if (mport_db_prepare(mport->db, &stmt, "SELECT COUNT(*) FROM depends WHERE pkg=%Q", pkg->name) != MPORT_OK)
+    RETURN_CURRENT_ERROR;
+    
+  ret = sqlite3_step(stmt);
+  sqlite3_finalize(stmt);  
+    
+  switch (ret) {
+    case SQLITE_ROW:
+      count = sqlite3_column_int(stmt, 0);
+      break;
+    case SQLITE_DONE:
+      RETURN_ERROR(MPORT_ERR_INTERNAL, "SQLite returned no rows for a COUNT(*) select.");
+      break;
+    default:
+      RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(mport->db));
+      break;
+  }
+  
+  if ((extra->depends = (char **)calloc(count, sizeof(char *))) == NULL)
+    return MPORT_ERR_NO_MEM;
+  
+  if (mport_db_prepare(mport->db, &stmt, "SELECT depend_pkgname, depend_pkgversion, depend_port FROM depends WHERE pkg=%Q", pkg->name) != MPORT_OK)
+    RETURN_CURRENT_ERROR;
+  
+  i = 0;
+  while (1) {
+    ret = sqlite3_step(stmt);
+    
+    if (ret == SQLITE_ROW) {
+      if (asprintf(&entry, "%s:%s:%s", sqlite3_column_text(stmt, 0), sqlite3_column_text(stmt, 2), sqlite3_column_text(stmt, 1)) == -1)
+        return MPORT_ERR_NO_MEM;  
+        
+      extra->depends[i] = entry;
+      i++;
+    } else if (ret == SQLITE_DONE) {
+      break;
+    } else {
+      sqlite3_finalize(stmt);
+      RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(mport->db));
+    }
+  }
+  
+  sqlite3_finalize(stmt);
+  
+  return MPORT_OK;
 }

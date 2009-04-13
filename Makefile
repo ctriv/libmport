@@ -11,7 +11,7 @@ SRCS=		bundle_write.c bundle_read.c plist.c create_primative.c db.c \
 INCS=		mport.h 
 
 
-CFLAGS+=	-I${.CURDIR} -DDEBUGGING
+CFLAGS+=	-I${.CURDIR} #-DDEBUGGING
 WARNS?=	3
 WFORMAT?=	1
 SHLIB_MAJOR=	1
