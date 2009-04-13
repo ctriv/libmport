@@ -190,10 +190,6 @@ MPORT_PUBLIC_API int mport_pkgmeta_search_master(mportInstance *mport, mportPack
 }
 
 
-
-
-
-
 /* mport_pkgmeta_get_downdepends(mportInstance *mport, mportPackageMeta *pkg, mportPackageMeta ***pkg_vec)
  * 
  * Populate the depends of a pkg using the data in the master database.  
@@ -220,6 +216,44 @@ MPORT_PUBLIC_API int mport_pkgmeta_get_downdepends(mportInstance *mport, mportPa
     return MPORT_OK;    /* XXX is there some way to optimize repeated lookups away? */
 
   if (mport_db_prepare(mport->db, &stmt, "SELECT packages.pkg, packages.version, packages.origin, packages.lang, packages.prefix, packages.comment FROM packages,depends WHERE packages.pkg=depends.depend_pkgname AND depends.pkg=%Q", pkg->name) != MPORT_OK) 
+    RETURN_CURRENT_ERROR;
+
+  ret = populate_vec_from_stmt(pkg_vec_p, count, mport->db, stmt);
+ 
+  sqlite3_finalize(stmt);
+  return ret; 
+}  
+
+
+
+/* mport_pkgmeta_get_updepends(mportInstance *mport, mportPackageMeta *pkg, mportPackageMeta ***pkg_vec)
+ * 
+ * Populate the upwards depends of a pkg using the data in the master database.  
+ */
+MPORT_PUBLIC_API int mport_pkgmeta_get_updepends(mportInstance *mport, mportPackageMeta *pkg, mportPackageMeta ***pkg_vec_p)
+{
+  int count = 0;
+  int ret;
+  sqlite3_stmt *stmt;
+  
+  /* if the depends are set, there's nothing for us to do */
+  if (mport_db_prepare(mport->db, &stmt, "SELECT COUNT(*) FROM depends WHERE depend_pkgname=%Q", pkg->name) != MPORT_OK)
+    RETURN_CURRENT_ERROR;
+    
+  if (sqlite3_step(stmt) != SQLITE_ROW) {
+    sqlite3_finalize(stmt);
+    RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(mport->db));
+  }
+  
+  count = sqlite3_column_int(stmt, 0);
+  sqlite3_finalize(stmt);
+  
+  if (count == 0) {
+    *pkg_vec_p = NULL;
+    return MPORT_OK;  
+  }
+
+  if (mport_db_prepare(mport->db, &stmt, "SELECT packages.pkg, packages.version, packages.origin, packages.lang, packages.prefix, packages.comment FROM packages,depends WHERE packages.pkg=depends.pkg AND depends.depend_pkgname=%Q", pkg->name) != MPORT_OK) 
     RETURN_CURRENT_ERROR;
 
   ret = populate_vec_from_stmt(pkg_vec_p, count, mport->db, stmt);
