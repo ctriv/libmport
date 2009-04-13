@@ -42,7 +42,7 @@
 #include "mport.h"
 #include "mport_private.h"
 
-static int create_stub_db(sqlite3 **);
+static int create_stub_db(sqlite3 **, const char *);
 static int insert_assetlist(sqlite3 *, mportAssetList *, mportPackageMeta *, mportCreateExtras *);
 static int insert_meta(sqlite3 *, mportPackageMeta *, mportCreateExtras *);
 static int insert_depends(sqlite3 *, mportPackageMeta *, mportCreateExtras *);
@@ -67,12 +67,8 @@ MPORT_PUBLIC_API int mport_create_primative(mportAssetList *assetlist, mportPack
     ret = SET_ERROR(MPORT_ERR_FILEIO, strerror(errno));
     goto CLEANUP;
   }
-  if (chdir(tmpdir) != 0)  {
-    ret = SET_ERROR(MPORT_ERR_FILEIO, strerror(errno));
-    goto CLEANUP;
-  }
   
-  if ((ret = create_stub_db(&db)) != MPORT_OK)
+  if ((ret = create_stub_db(&db, tmpdir)) != MPORT_OK)
     goto CLEANUP;
 
   if ((ret = insert_assetlist(db, assetlist, pack, extra)) != MPORT_OK)
@@ -95,9 +91,13 @@ MPORT_PUBLIC_API int mport_create_primative(mportAssetList *assetlist, mportPack
 }
 
 
-static int create_stub_db(sqlite3 **db) 
+static int create_stub_db(sqlite3 **db, const char *tmpdir) 
 {
-  if (sqlite3_open(MPORT_STUB_DB_FILE, db) != SQLITE_OK) {
+  char file[FILENAME_MAX];
+  
+  (void)snprintf(file, FILENAME_MAX, "%s/%s", tmpdir, MPORT_STUB_DB_FILE);
+  
+  if (sqlite3_open(file, db) != SQLITE_OK) {
     sqlite3_close(*db);
     RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(*db));
   }
