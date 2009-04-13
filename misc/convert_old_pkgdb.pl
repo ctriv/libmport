@@ -6,18 +6,18 @@ use File::Copy qw(copy);
 use DBI;
 use Data::Dumper;
 
-#
-# TODO:  this doesn't create the schema, need a way to init the mport system.
-#	 absolutify files and dirrm(try)'s in the asset list.  cwd tracking... urg.
-
 my $pkg_dbdir = '/var/db/pkg';
 
 
 $|++;
 
-print "Backing up master.db to master.db.orig...";
-copy("/var/db/mport/master.db", "/var/db/mport/master.db.orig") || die "cp failed: $!\b";
-print " done.\n";
+if (-e "/var/db/mport/master.db") {
+  print "Backing up master.db to master.db.orig...";
+  copy("/var/db/mport/master.db", "/var/db/mport/master.db.orig") || die "cp failed: $!\b";
+  print " done.\n";
+} else {
+  system("/usr/libexec/mport.init");
+}
 
 my $dbh = DBI->connect("dbi:SQLite:dbname=/var/db/mport/master.db","","", { RaiseError => 1 });
 
