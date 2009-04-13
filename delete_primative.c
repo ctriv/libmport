@@ -172,6 +172,9 @@ MPORT_PUBLIC_API int mport_delete_primative(mportInstance *mport, mportPackageMe
   if (mport_db_do(mport->db, "DELETE FROM packages WHERE pkg=%Q", pack->name) != MPORT_OK)
     RETURN_CURRENT_ERROR;
     
+  if (mport_db_do(mport->db, "DELETE FROM categories WHERE pkg=%Q", pack->name) != MPORT_OK)
+    RETURN_CURRENT_ERROR;
+
   if (delete_pkg_infra(mport, pack) != MPORT_OK)
     RETURN_CURRENT_ERROR;
 
