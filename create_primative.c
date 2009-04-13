@@ -241,11 +241,11 @@ static int insert_categories(sqlite3 *db, mportPackageMeta *pkg)
   
   if (pkg->categories == NULL)
     return MPORT_OK; // or should this be an error?
-  
-  while (pkg->categories[i] != NULL) {
-    if (mport_db_prepare(db, &stmt, "INSERT INTO categories (pkg, category) VALUES (?,?)") != MPORT_OK)
-      RETURN_CURRENT_ERROR;
-  
+
+  if (mport_db_prepare(db, &stmt, "INSERT INTO categories (pkg, category) VALUES (?,?)") != MPORT_OK)
+    RETURN_CURRENT_ERROR;
+
+  while (pkg->categories[i] != NULL) {  
     if (sqlite3_bind_text(stmt, 1, pkg->name, -1, SQLITE_STATIC) != SQLITE_OK) {
       RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
     }
