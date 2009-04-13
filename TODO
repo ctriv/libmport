@@ -1,2 +1,28 @@
-categories in stub and master
-mport_sort_pkg_list()
+For library alpha 1:
+
+* Figure out the shared library problem wrt updating.  Do we need a way to
+  mark such relationships that aren't LIB_DEPENDS?  I'm leaning towards a 
+  hashing based solution.
+* mport_sort_pkg_list(), so you can say mport delete xfce* and have it do 
+  in the right order
+* fix the progress bar for update.  Add a title to the progress bar.
+* fetch
+* index handling
+* mport_install()
+* mport_update()
+
+For tool alpha 1:
+
+* tree handling
+* update
+* install
+* expand query:
+	query -a[ll] foo    
+	query -up[depends] foo
+	query -as[sets] foo
+	query foo # normal display
+* owner file (what package owns this file)
+* cleanup SIGINT
+* browse
+* list
+
