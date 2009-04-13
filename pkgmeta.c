@@ -403,12 +403,13 @@ static int populate_meta_from_stmt(mportPackageMeta *pack, sqlite3 *db, sqlite3_
 
 
   /* Copy comment to pack->comment */
-  if ((tmp = sqlite3_column_text(stmt, 5)) == NULL) 
-    RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
-  
-  if ((pack->comment = strdup(tmp)) == NULL)
-    return MPORT_ERR_NO_MEM;
-
+  if ((tmp = sqlite3_column_text(stmt, 5)) == NULL) {
+    if ((pack->comment = strdup("")) == NULL)
+      return MPORT_ERR_NO_MEM;
+  } else {
+    if ((pack->comment = strdup(tmp)) == NULL)
+      return MPORT_ERR_NO_MEM;
+  }
   
   return MPORT_OK;
 }
