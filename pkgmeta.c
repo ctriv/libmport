@@ -212,8 +212,10 @@ MPORT_PUBLIC_API int mport_pkgmeta_get_downdepends(mportInstance *mport, mportPa
   count = sqlite3_column_int(stmt, 0);
   sqlite3_finalize(stmt);
   
-  if (count == 0) 
-    return MPORT_OK;    /* XXX is there some way to optimize repeated lookups away? */
+  if (count == 0) {
+    *pkg_vec_p = NULL;
+    return MPORT_OK;  
+  }
 
   if (mport_db_prepare(mport->db, &stmt, "SELECT packages.pkg, packages.version, packages.origin, packages.lang, packages.prefix, packages.comment FROM packages,depends WHERE packages.pkg=depends.depend_pkgname AND depends.pkg=%Q", pkg->name) != MPORT_OK) 
     RETURN_CURRENT_ERROR;
