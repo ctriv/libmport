@@ -205,7 +205,6 @@ static int build_stub_db(sqlite3 **db,  const char *tmpdir,  const char *dbfile,
   }
 
   /* just have to sort the packages (going from unsorted to packages), no big deal... ;) */
-   /* XXXXXX this does not work correctly if there are outside depends. */
   while (1) {
     if (mport_db_do(*db, "INSERT INTO packages SELECT * FROM unsorted WHERE NOT EXISTS (SELECT 1 FROM packages WHERE packages.pkg=unsorted.pkg) AND (NOT EXISTS (SELECT 1 FROM depends WHERE depends.pkg=unsorted.pkg) OR NOT EXISTS (SELECT 1 FROM depends LEFT JOIN packages ON depends.depend_pkgname=packages.pkg WHERE depends.pkg=unsorted.pkg AND EXISTS (SELECT 1 FROM unsorted AS us2 WHERE us2.pkg=depend_pkgname) AND packages.pkg ISNULL))") != MPORT_OK)
       RETURN_CURRENT_ERROR;
