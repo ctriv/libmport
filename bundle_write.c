@@ -141,7 +141,7 @@ int mport_bundle_write_add_file(mportBundleWrite *bundle, const char *filename, 
   char buff[BUFF_SIZE];
 
   if (lstat(filename, &st) != 0) {
-    RETURN_ERROR(MPORT_ERR_SYSCALL_FAILED, strerror(errno));
+    RETURN_ERRORX(MPORT_ERR_SYSCALL_FAILED, "Unable to stat %s: %s", filename, strerror(errno));
   }
 
   entry = archive_entry_new();
