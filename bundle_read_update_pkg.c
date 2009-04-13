@@ -45,7 +45,7 @@ int mport_bundle_read_update_pkg(mportInstance *mport, mportBundleRead *bundle, 
   int fd;
   
   mport_pkgmeta_logevent(mport, pkg, "Begining update");
-  
+
   if ((fd = mkstemp(tmpfile)) == -1) {
     RETURN_ERRORX(MPORT_ERR_SYSCALL_FAILED, "Couldn't make tmp file: %s", strerror(errno));
   }
@@ -55,7 +55,7 @@ int mport_bundle_read_update_pkg(mportInstance *mport, mportBundleRead *bundle, 
   if (make_backup_bundle(mport, pkg, tmpfile) != MPORT_OK) {
     RETURN_CURRENT_ERROR;
   }
-  
+
   if (
         (mport_delete_primative(mport, pkg, 1) != MPORT_OK)
                           ||
@@ -84,9 +84,9 @@ static int make_backup_bundle(mportInstance *mport, mportPackageMeta *pkg, char 
 
   if (build_create_extras(mport, pkg, tmpfile, &extra) != MPORT_OK) 
     RETURN_CURRENT_ERROR;
- 
+
   ret = mport_create_primative(alist, pkg, extra);
- 
+
   mport_assetlist_free(alist);
   mport_createextras_free(extra);
 
@@ -111,7 +111,7 @@ static int build_create_extras(mportInstance *mport, mportPackageMeta *pkg, char
   extra = mport_createextras_new();
   *extra_p = extra;
   
-  extra->pkg_filename = tmpfile;
+  extra->pkg_filename = strdup(tmpfile); /* this MUST be on the heap, as it will be freed */
   extra->sourcedir = strdup("");
   
   if (build_create_extras_depends(mport, pkg, extra) != MPORT_OK)
@@ -188,7 +188,7 @@ static int build_create_extras_depends(mportInstance *mport, mportPackageMeta *p
       break;
   }
   
-  if ((extra->depends = (char **)calloc(count, sizeof(char *))) == NULL)
+  if ((extra->depends = (char **)calloc(count + 1, sizeof(char *))) == NULL)
     return MPORT_ERR_NO_MEM;
   
   if (mport_db_prepare(mport->db, &stmt, "SELECT depend_pkgname, depend_pkgversion, depend_port FROM depends WHERE pkg=%Q", pkg->name) != MPORT_OK)
@@ -205,6 +205,7 @@ static int build_create_extras_depends(mportInstance *mport, mportPackageMeta *p
       extra->depends[i] = entry;
       i++;
     } else if (ret == SQLITE_DONE) {
+      extra->depends[i] = NULL;
       break;
     } else {
       sqlite3_finalize(stmt);

@@ -55,7 +55,7 @@ MPORT_PUBLIC_API int mport_update_primative(mportInstance *mport, const char *fi
   
   for (i=0; *(pkgs + i) != NULL; i++) {
     pkg = pkgs[i];
-        
+
     if (
         (mport_check_update_preconditions(mport, pkg) != MPORT_OK) 
                       ||
@@ -104,7 +104,7 @@ static int set_prefix_to_installed(mportInstance *mport, mportPackageMeta *pkg)
   }
 
   sqlite3_finalize(stmt);
-  
+
   return ret;
 }
 

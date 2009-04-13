@@ -305,6 +305,8 @@ int mport_pkgmeta_get_assetlist(mportInstance *mport, mportPackageMeta *pkg, mpo
       sqlite3_finalize(stmt);
       return MPORT_ERR_NO_MEM;
     }
+    
+    STAILQ_INSERT_TAIL(alist, e, next);
   }
   
   sqlite3_finalize(stmt);

@@ -54,7 +54,9 @@ static char *mport_err_defaults[] = {
   "Malformed depend.",
   "No such package.",
   "Checksum mismatch.",
-  "Packages depend on this package."
+  "Packages depend on this package.",
+  "Bundle file was malformed.",
+  "Package is not upgradable"
 };
   
 

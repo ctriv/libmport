@@ -85,7 +85,7 @@ MPORT_PUBLIC_API int mport_create_primative(mportAssetList *assetlist, mportPack
     ret = SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
     goto CLEANUP;
   }
-    
+  
   if ((ret = archive_files(assetlist, pack, extra, tmpdir)) != MPORT_OK)
     goto CLEANUP;
   
@@ -148,9 +148,11 @@ static int insert_assetlist(sqlite3 *db, mportAssetList *assetlist, mportPackage
     if (e->type == ASSET_FILE) {
       (void)snprintf(file, FILENAME_MAX, "%s/%s", cwd, e->data);
       
-      if (lstat(file, &st) != 0) 
+      if (lstat(file, &st) != 0) {
+        sqlite3_finalize(stmnt);
         RETURN_ERRORX(MPORT_ERR_FILE_NOT_FOUND, "Couln't stat %s: %s", file, strerror(errno));
-      
+      }
+
       if (S_ISREG(st.st_mode)) {
 
         if (MD5File(file, md5) == NULL) 
@@ -389,7 +391,7 @@ static int archive_files(mportAssetList *assetlist, mportPackageMeta *pack, mpor
   /* second step - the meta files */
   if (archive_metafiles(bundle, pack, extra) != MPORT_OK)
     RETURN_CURRENT_ERROR;
-  
+
   /* last step - the real files from the assetlist */
   if (archive_assetlistfiles(bundle, pack, extra, assetlist) != MPORT_OK)
     RETURN_CURRENT_ERROR;
@@ -438,15 +440,14 @@ static int archive_assetlistfiles(mportBundleWrite *bundle, mportPackageMeta *pa
   mportAssetListEntry *e;
   char filename[FILENAME_MAX];
   char *cwd = pack->prefix;
-  int total = 0;
+  /*int total = 0;
   int cur   = 0;
   
-  /* (mport->progress_init_cb)(); */
+   (mport->progress_init_cb)(); 
   
-  /* get the total number of files */
   STAILQ_FOREACH(e, assetlist, next) {
     total++;
-  }
+  } */
   
   STAILQ_FOREACH(e, assetlist, next) {
     if (e->type == ASSET_CWD) 
@@ -469,19 +470,10 @@ static int archive_assetlistfiles(mportBundleWrite *bundle, mportPackageMeta *pa
   return MPORT_OK;
 }
 
-#ifdef DEBUG
-
-static int clean_up(const char *tmpdir)
-{
-  /* do nothing */
-}
-
-#else
 
 static int clean_up(const char *tmpdir) 
 {
   return mport_rmtree(tmpdir);
 }
 
-#endif
 
