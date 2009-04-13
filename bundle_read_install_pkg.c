@@ -121,6 +121,9 @@ static int do_actual_install(mportInstance *mport, mportBundleRead *bundle, mpor
   /* Insert the depends into the master table */
   if (mport_db_do(db, "INSERT INTO depends (pkg, depend_pkgname, depend_pkgversion, depend_port) SELECT pkg,depend_pkgname,depend_pkgversion,depend_port FROM stub.depends WHERE pkg=%Q", pkg->name) != MPORT_OK) 
     goto ERROR;
+  /* Insert the categories into the master table */
+  if (mport_db_do(db, "INSERT INTO categories (pkg, category) SELECT pkg, category FROM stub.categories WHERE pkg=%Q", pkg->name) != MPORT_OK)
+    goto ERROR;
   
   if (mport_db_prepare(db, &assets, "SELECT type,data,checksum FROM stub.assets WHERE pkg=%Q", pkg->name) != MPORT_OK) 
     goto ERROR;
