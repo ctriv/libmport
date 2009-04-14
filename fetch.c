@@ -30,6 +30,10 @@
 #include "mport.h"
 #include "mport_private.h"
 #include <stdlib.h>
+#include <stdio.h>
+#include <sys/param.h>
+#include <fetch.h>
+
 
 static int fetch(mportInstance *, const char *, const char *);
 
@@ -113,5 +117,11 @@ int mport_fetch_pkg(mportInstance *mport, const char *filename)
   free(dest);
   
   RETURN_ERRORX(MPORT_ERR_FETCH, "Unable to fetch %s: %s", filename, mport_err_string());
+}
+
+static int fetch(mportInstance *mport, const char *url, const char *dest) 
+{
+  
+  return MPORT_OK;
 }
 
