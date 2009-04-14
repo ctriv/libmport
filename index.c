@@ -31,7 +31,7 @@
 #include "mport_private.h"
 
 
-MPORT_PUBLIC_API int mport_load_index(mportInstance *mport)
+MPORT_PUBLIC_API int mport_index_load(mportInstance *mport)
 {
   if (mport_fetch_index(mport) != MPORT_OK)
     RETURN_CURRENT_ERROR;

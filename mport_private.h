@@ -169,6 +169,10 @@ int mport_set_errx(int , const char *, ...);
 int mport_fetch_index(mportInstance *);
 int mport_fetch_pkg(mportInstance *, const char *);
 
+/* a few index things */
+int mport_index_is_recentish(mportInstance *);
+int mport_index_get_mirror_list(mportInstance *, char ***);
+
 
 /* Binaries we use */
 #define MPORT_MTREE_BIN		"/usr/sbin/mtree"

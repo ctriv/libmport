@@ -118,6 +118,8 @@ int mport_pkgmeta_get_downdepends(mportInstance *, mportPackageMeta *, mportPack
 int mport_pkgmeta_get_updepends(mportInstance *, mportPackageMeta *, mportPackageMeta ***);
 
 
+int mport_index_load(mportInstance *);
+
 
 typedef struct {
   char *pkg_filename;
@@ -176,7 +178,8 @@ const char * mport_err_string(void);
 #define MPORT_ERR_UPWARDS_DEPENDS	16
 #define MPORT_ERR_MALFORMED_BUNDLE	17
 #define MPORT_ERR_NOT_UPGRADABLE	18
-
+#define MPORT_ERR_FETCH			19
+#define MPORT_ERR_NO_INDEX		20
 
 /* Utils */
 void mport_parselist(char *, char ***);

@@ -29,7 +29,9 @@
 
 #include "mport.h"
 #include "mport_private.h"
+#include <stdlib.h>
 
+static int fetch(mportInstance *, const char *, const char *);
 
 int mport_fetch_index(mportInstance *mport)
 {
@@ -77,7 +79,7 @@ int mport_fetch_index(mportInstance *mport)
   }
     
   free(dest);
-  RETURN_ERRRORX(MPORT_ERR_FETCH, "Unable to fetch index file: %s", mport_err_string());
+  RETURN_ERRORX(MPORT_ERR_FETCH, "Unable to fetch index file: %s", mport_err_string());
 }
 
 
@@ -94,7 +96,7 @@ int mport_fetch_pkg(mportInstance *mport, const char *filename)
   if (mirrors == NULL) 
     RETURN_ERROR(MPORT_ERR_INTERNAL, "Attempt to fetch a file without an index.");
     
-  asprintf(&dest, "%/%", MPORT_FETCH_STAGING_DIR, filename);
+  asprintf(&dest, "%s/%s", MPORT_FETCH_STAGING_DIR, filename);
   
   while (mirrors[i] != NULL) {
     asprintf(&url, "%s/%s/%s", mirrors[i], MPORT_URL_PATH, filename);
@@ -110,6 +112,6 @@ int mport_fetch_pkg(mportInstance *mport, const char *filename)
   
   free(dest);
   
-  RETURN_ERRRORX(MPORT_ERR_FETCH, "Unable to fetch %s: %s", filename, mport_err_string());
+  RETURN_ERRORX(MPORT_ERR_FETCH, "Unable to fetch %s: %s", filename, mport_err_string());
 }
 
