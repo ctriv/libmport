@@ -5,8 +5,7 @@ For library alpha 1:
   hashing based solution.
 * mport_sort_pkg_list(), so you can say mport delete xfce* and have it do 
   in the right order
-* fix the progress bar for update.  Add a title to the progress bar.
-* fetch
+* fix the progress bar for update.  
 * index handling
 * mport_install()
 * mport_update()
