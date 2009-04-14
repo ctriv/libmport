@@ -45,6 +45,8 @@
 
 /* callback syntaxtic sugar */
 void mport_call_msg_cb(mportInstance *, const char *, ...);
+void mport_call_progress_init_cb(mportInstance *, const char *, ...);
+
 
 /* precondition checking */
 int mport_check_install_preconditions(mportInstance *, mportPackageMeta *);

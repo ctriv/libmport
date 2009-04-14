@@ -37,7 +37,7 @@
 #include <stdio.h>
 
 typedef void (*mport_msg_cb)(const char *);
-typedef void (*mport_progress_init_cb)(void);
+typedef void (*mport_progress_init_cb)(const char *);
 typedef void (*mport_progress_step_cb)(int, int, const char *);
 typedef void (*mport_progress_free_cb)(void);
 typedef int (*mport_confirm_cb)(const char *, const char *, const char *, int);
@@ -65,7 +65,7 @@ void mport_set_confirm_cb(mportInstance *, mport_confirm_cb);
 
 void mport_default_msg_cb(const char *);
 int mport_default_confirm_cb(const char *, const char *, const char *, int);
-void mport_default_progress_init_cb(void);
+void mport_default_progress_init_cb(const char *);
 void mport_default_progress_step_cb(int, int, const char *);
 void mport_default_progress_free_cb(void);
 

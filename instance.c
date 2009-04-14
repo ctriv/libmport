@@ -137,6 +137,25 @@ void mport_call_msg_cb(mportInstance *mport, const char *fmt, ...)
   
   free(msg);
 }
+
+
+void mport_call_progress_init_cb(mportInstance *mport, const char *fmt, ...)
+{
+  va_list args;
+  char *title;
+  
+  va_start(args, fmt);
+  (void)vasprintf(&title, fmt, args);
+  
+  if (title == NULL)
+    return;
+    
+  (mport->progress_init_cb)(title);
+  
+  free(title);
+}
+
+
   
 
 MPORT_PUBLIC_API int mport_instance_free(mportInstance *mport) 

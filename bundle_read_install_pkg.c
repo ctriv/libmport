@@ -106,8 +106,8 @@ static int do_actual_install(mportInstance *mport, mportBundleRead *bundle, mpor
       RETURN_CURRENT_ERROR;
   }
   
-  (mport->progress_init_cb)();
-  
+
+  mport_call_progress_init_cb(mport, "Installing %s-%s", pkg->name, pkg->version);  
 
   /* Insert the package meta row into the packages table (We use pack here because things might have been twiddled) */
   /* Note that this will be marked as dirty by default */  

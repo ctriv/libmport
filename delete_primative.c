@@ -75,7 +75,7 @@ MPORT_PUBLIC_API int mport_delete_primative(mportInstance *mport, mportPackageMe
       RETURN_CURRENT_ERROR;
   }
   
-  (mport->progress_init_cb)();
+  mport_call_progress_init_cb(mport, "Deleteing %s-%s", pack->name, pack->version);
 
   if (mport_db_do(mport->db, "UPDATE packages SET status='dirty' WHERE pkg=%Q", pack->name) != MPORT_OK)
     RETURN_CURRENT_ERROR;
