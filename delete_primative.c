@@ -65,7 +65,7 @@ MPORT_PUBLIC_API int mport_delete_primative(mportInstance *mport, mportPackageMe
 
   switch (sqlite3_step(stmt)) {
     case SQLITE_ROW:
-      total   = sqlite3_column_int(stmt, 0) + 2;
+      total   = sqlite3_column_int(stmt, 0) + 1;
       current = 0;
       sqlite3_finalize(stmt);
       break;
@@ -182,13 +182,6 @@ MPORT_PUBLIC_API int mport_delete_primative(mportInstance *mport, mportPackageMe
     RETURN_CURRENT_ERROR; 
   
   (mport->progress_step_cb)(++current, total, "DB Updated");
-
-  
-  /* clean up the master database file, we don't want to frag it */
-  if (mport_db_do(mport->db, "VACUUM") != MPORT_OK)
-    RETURN_CURRENT_ERROR;
-
-  (mport->progress_step_cb)(++current, total, "DB Defragged");
 
   
   (mport->progress_free_cb)();
