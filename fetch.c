@@ -97,13 +97,13 @@ int mport_fetch_index(mportInstance *mport)
 }
 
 
-/* mport_fetch_pkg(mport, filename)
+/* mport_fetch_bundle(mport, filename)
  *
  * Fetch a given bundle from a remote.  If there is no loaded index, then
  * an error is thrown.  The file will be downloaded to the MPORT_FETCH_STAGING_DIR
  * directory.
  */
-int mport_fetch_pkg(mportInstance *mport, const char *filename)
+int mport_fetch_bundle(mportInstance *mport, const char *filename)
 {
   char **mirrors;
   char *url;
