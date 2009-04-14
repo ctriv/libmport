@@ -40,6 +40,13 @@
 
 static int fetch(mportInstance *, const char *, const char *);
 
+
+/* mport_fetch_index(mport)
+ *
+ * Fetch the index from a remote, or the bootstrap if we don't currently
+ * have an index.  If the current index is recentish, then don't do
+ * anything.
+ */
 int mport_fetch_index(mportInstance *mport)
 {
   char **mirrors;
@@ -90,6 +97,12 @@ int mport_fetch_index(mportInstance *mport)
 }
 
 
+/* mport_fetch_pkg(mport, filename)
+ *
+ * Fetch a given bundle from a remote.  If there is no loaded index, then
+ * an error is thrown.  The file will be downloaded to the MPORT_FETCH_STAGING_DIR
+ * directory.
+ */
 int mport_fetch_pkg(mportInstance *mport, const char *filename)
 {
   char **mirrors;
