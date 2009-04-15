@@ -41,3 +41,15 @@ MPORT_PUBLIC_API int mport_index_load(mportInstance *mport)
     
   return MPORT_OK;
 }
+
+
+int mport_index_is_recentish(mportInstance *mport) 
+{
+  /* XXX WRITE ME */
+  return 1;
+}  
+
+int mport_index_get_mirror_list(mportInstance *mport, char ***list_p)
+{
+  return MPORT_OK;
+}

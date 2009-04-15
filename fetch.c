@@ -122,6 +122,8 @@ int mport_fetch_pkg(mportInstance *mport, const char *filename)
   RETURN_ERRORX(MPORT_ERR_FETCH, "Unable to fetch %s: %s", filename, mport_err_string());
 }
 
+
+
 static int fetch(mportInstance *mport, const char *url, const char *dest) 
 {
   FILE *remote;
@@ -132,7 +134,6 @@ static int fetch(mportInstance *mport, const char *url, const char *dest)
   size_t size;                                  
   size_t got;
   size_t wrote;
-  
   
   if ((local = fopen(dest, "w")) == NULL) {
     RETURN_ERRORX(MPORT_ERR_FILEIO, "Unable to open %s: %s", dest, strerror(errno));
@@ -158,11 +159,7 @@ static int fetch(mportInstance *mport, const char *url, const char *dest)
       } else if (feof(remote)) {
         /* do nothing */
       } 
-    } else {
-      fclose(local); fclose(remote);
-      unlink(dest);
-      RETURN_ERROR(MPORT_ERR_FETCH, "Read was short, but no error or eof.");
-    }
+    } 
   
     got += size;
   
@@ -180,6 +177,8 @@ static int fetch(mportInstance *mport, const char *url, const char *dest)
     if (feof(remote))
       break;
   }
+
+  (mport->progress_free_cb)();
 
   return MPORT_OK;
 }
