@@ -33,7 +33,10 @@
 #include <stdio.h>
 #include <sys/param.h>
 #include <fetch.h>
+#include <string.h>
+#include <errno.h>
 
+#define BUFFSIZE	1024 * 8
 
 static int fetch(mportInstance *, const char *, const char *);
 
@@ -98,7 +101,7 @@ int mport_fetch_pkg(mportInstance *mport, const char *filename)
     RETURN_CURRENT_ERROR;
     
   if (mirrors == NULL) 
-    RETURN_ERROR(MPORT_ERR_INTERNAL, "Attempt to fetch a file without an index.");
+    RETURN_ERROR(MPORT_ERR_NO_INDEX, "Attempt to fetch a file without an index.");
     
   asprintf(&dest, "%s/%s", MPORT_FETCH_STAGING_DIR, filename);
   
@@ -121,7 +124,63 @@ int mport_fetch_pkg(mportInstance *mport, const char *filename)
 
 static int fetch(mportInstance *mport, const char *url, const char *dest) 
 {
+  FILE *remote;
+  FILE *local;
+  struct url_stat stat;
+  char buffer[BUFFSIZE];
+  char *ptr;
+  size_t size;                                  
+  size_t got;
+  size_t wrote;
   
+  
+  if ((local = fopen(dest, "w")) == NULL) {
+    RETURN_ERRORX(MPORT_ERR_FILEIO, "Unable to open %s: %s", dest, strerror(errno));
+  }
+
+  mport_call_progress_init_cb(mport, "Downloading %s", url);
+  
+  if ((remote = fetchXGetURL(url, &stat, "p")) == NULL) {
+    fclose(local);
+    unlink(dest);
+    RETURN_ERRORX(MPORT_ERR_FETCH, "Fetch error: %s: %s", url, fetchLastErrString);
+  }
+  
+  while (1) {
+    size = fread(buffer, 1, BUFFSIZE, remote);
+    
+    if (size < BUFFSIZE) {
+      if (ferror(remote)) {
+        fclose(local);
+        fclose(remote);
+        unlink(dest);
+        RETURN_ERRORX(MPORT_ERR_FETCH, "Fetch error: %s: %s", url, fetchLastErrString);  
+      } else if (feof(remote)) {
+        /* do nothing */
+      } 
+    } else {
+      fclose(local); fclose(remote);
+      unlink(dest);
+      RETURN_ERROR(MPORT_ERR_FETCH, "Read was short, but no error or eof.");
+    }
+  
+    got += size;
+  
+    (mport->progress_step_cb)(got, stat.size, "XXX Rate");
+
+    for (ptr = buffer; size > 0; ptr += wrote, size -= wrote) {
+      wrote = fwrite(ptr, 1, size, local);
+      if (wrote < size) {
+        fclose(local); fclose(remote);
+        unlink(dest);
+        RETURN_ERRORX(MPORT_ERR_FILEIO, "Write error %s: %s", dest, strerror(errno));
+      }
+    }
+
+    if (feof(remote))
+      break;
+  }
+
   return MPORT_OK;
 }
 
