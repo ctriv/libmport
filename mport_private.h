@@ -168,7 +168,7 @@ int mport_set_errx(int , const char *, ...);
 /* fetch stuff */
 #define MPORT_URL_PATH			MPORT_ARCH "/" MPORT_OSVERSION
 #define MPORT_INDEX_URL_PATH		MPORT_URL_PATH "/index.db.bz2"
-#define MPORT_BOOTSTRAP_INDEX_URL 	"http://index.mport..midnightbsd.org/" MPORT_URL_PATH "/index.db.bz2"
+#define MPORT_BOOTSTRAP_INDEX_URL 	"http://index.mport.midnightbsd.org/" MPORT_URL_PATH "/index.db.bz2"
 
 int mport_fetch_index(mportInstance *);
 int mport_fetch_bundle(mportInstance *, const char *);
