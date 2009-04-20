@@ -79,12 +79,14 @@ int mport_fetch_index(mportInstance *mport)
 
       if (url == NULL) {
         free(dest);
+        mport_free_vec(mirrors);
         return MPORT_ERR_NO_MEM;
       }
 
       if (fetch(mport, url, MPORT_INDEX_FILE) == MPORT_OK) {
         free(url);
         free(dest);
+        mport_free_vec(mirrors);
         return MPORT_OK;
       } 
       
@@ -93,6 +95,7 @@ int mport_fetch_index(mportInstance *mport)
   }
     
   free(dest);
+  mport_free_vec(mirrors);
   RETURN_ERRORX(MPORT_ERR_FETCH, "Unable to fetch index file: %s", mport_err_string());
 }
 
@@ -124,6 +127,7 @@ int mport_fetch_bundle(mportInstance *mport, const char *filename)
     if (fetch(mport, url, dest) == MPORT_OK) {
       free(url);
       free(dest);
+      mport_free_vec(mirrors);
       return MPORT_OK;
     } 
     
@@ -131,7 +135,7 @@ int mport_fetch_bundle(mportInstance *mport, const char *filename)
   }
   
   free(dest);
-  
+  mport_free_vec(mirrors); 
   RETURN_ERRORX(MPORT_ERR_FETCH, "Unable to fetch %s: %s", filename, mport_err_string());
 }
 

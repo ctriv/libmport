@@ -335,3 +335,19 @@ int mport_run_asset_exec(mportInstance *mport, const char *fmt, const char *cwd,
   return mport_xsystem(mport, cmnd);
 }          
 
+
+/* mport_free_vec(void **)
+ *
+ * free a null padded list of pointers, freeing each pointer as well.
+ */
+void mport_free_vec(void *vec)
+{
+  char *p = (char *)*(char **)vec;
+  
+  while (p != NULL) {
+    free(p);
+    p++;
+  }
+  
+  free(vec);
+}
