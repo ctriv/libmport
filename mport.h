@@ -121,6 +121,14 @@ int mport_pkgmeta_get_downdepends(mportInstance *, mportPackageMeta *, mportPack
 int mport_pkgmeta_get_updepends(mportInstance *, mportPackageMeta *, mportPackageMeta ***);
 
 
+typedef struct {
+  char *pkgname;
+  char *version;
+  char *comment;
+  char *www;
+  char *bundlefile;
+} mportIndexEntry;
+
 int mport_index_load(mportInstance *);
 
 
