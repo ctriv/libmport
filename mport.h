@@ -43,7 +43,10 @@ typedef void (*mport_progress_free_cb)(void);
 typedef int (*mport_confirm_cb)(const char *, const char *, const char *, int);
 
 /* Mport Instance (an installed copy of the mport system) */
+#define MPORT_INST_HAVE_INDEX 1
+
 typedef struct {
+  int flags;
   sqlite3 *db;
   char *root;
   mport_msg_cb msg_cb;

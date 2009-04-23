@@ -38,6 +38,8 @@ MPORT_PUBLIC_API int mport_index_load(mportInstance *mport)
     
   if (mport_db_do(mport->db, "ATTACH %Q AS index", MPORT_INDEX_FILE) != MPORT_OK)
     RETURN_CURRENT_ERROR;
+
+  mport->flags |= MPORT_INST_HAVE_INDEX;
     
   return MPORT_OK;
 }

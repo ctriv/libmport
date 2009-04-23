@@ -185,4 +185,6 @@ int mport_index_get_mirror_list(mportInstance *, char ***);
 
 #define MPORT_URL_MAX		512
 
+#define MPORT_CHECK_FOR_INDEX(mport, func) if (!(mport->flags & MPORT_INST_HAVE_INDEX)) RETURN_ERRORX(MPORT_ERR_NO_INDEX, "Attempt to use %s before loading index.", func);
+
 #endif /* _MPORT_PRIV_H_ */

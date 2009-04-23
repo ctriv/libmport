@@ -30,15 +30,16 @@
 #include "mport.h"
 #include "mport_private.h"
 
-static int install_bundle_file(mportInstnace *, const char *);
+static int install_bundle_file(mportInstance *, const char *);
+static int resolve_depends(mportInstance *, mportPackageMeta *);
 
 MPORT_PUBLIC_API int mport_install(mportInstance *mport, const char *pkgname)
 {
   char *bundlefile;
   char *filename;
   int ret;
-  
-  MPORT_CHECK_FOR_INDEX(mport);
+
+  MPORT_CHECK_FOR_INDEX(mport, "mport_install()");
   
   if (mport_file_exists(pkgname)) 
     return install_bundle_file(pkgname);

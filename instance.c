@@ -48,6 +48,8 @@ MPORT_PUBLIC_API mportInstance * mport_instance_new()
 MPORT_PUBLIC_API int mport_instance_init(mportInstance *mport, const char *root)
 {
   char dir[FILENAME_MAX];
+
+  mport->flags = 0;
   
   if (root != NULL) {
     mport->root = strdup(root);
