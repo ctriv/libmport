@@ -54,44 +54,33 @@ int mport_fetch_index(mportInstance *mport)
   char *dest;
   int i;
   
-  if (mport_index_is_recentish(mport))
-    return MPORT_OK;
-  
-  if (mport_index_get_mirror_list(mport, &mirrors) != MPORT_OK)
-    RETURN_CURRENT_ERROR;
-  
-  /* XXX mirrors needs freeing */
+  MPORT_CHECK_FOR_INDEX(mport, "mport_fetch_index()");
   
   asprintf(&dest, "%s/%s.bz2", MPORT_FETCH_STAGING_DIR, MPORT_INDEX_FILE);
   
   if (dest == NULL)
     return MPORT_ERR_NO_MEM;
+
+  if (mport_index_get_mirror_list(mport, &mirrors) != MPORT_OK)
+    RETURN_CURRENT_ERROR;
     
-  if (mirrors == NULL) {
-    if (fetch(mport, MPORT_BOOTSTRAP_INDEX_URL, MPORT_INDEX_FILE) != MPORT_OK) {
-      RETURN_CURRENT_ERROR;
+  while (mirrors[i] != NULL) {
+    asprintf(&url, "%s/%s", mirrors[i], MPORT_INDEX_URL_PATH);
+
+    if (url == NULL) {
+      free(dest);
+      mport_free_vec(mirrors);
+      return MPORT_ERR_NO_MEM;
     }
-    
-    return MPORT_OK;
-  } else {
-    while (mirrors[i] != NULL) {
-      asprintf(&url, "%s/%s", mirrors[i], MPORT_INDEX_URL_PATH);
 
-      if (url == NULL) {
-        free(dest);
-        mport_free_vec(mirrors);
-        return MPORT_ERR_NO_MEM;
-      }
-
-      if (fetch(mport, url, MPORT_INDEX_FILE) == MPORT_OK) {
-        free(url);
-        free(dest);
-        mport_free_vec(mirrors);
-        return MPORT_OK;
-      } 
-      
+    if (fetch(mport, url, MPORT_INDEX_FILE) == MPORT_OK) {
       free(url);
-    }
+      free(dest);
+      mport_free_vec(mirrors);
+      return MPORT_OK;
+    } 
+    
+    free(url);
   }
     
   free(dest);
@@ -99,6 +88,17 @@ int mport_fetch_index(mportInstance *mport)
   RETURN_ERRORX(MPORT_ERR_FETCH, "Unable to fetch index file: %s", mport_err_string());
 }
 
+
+
+/* mport_fetch_bootstrap_index(mportInstance *mport)
+ *
+ * Fetches the index for the bootstrap site.  The index need not be loaded for this 
+ * to be used.
+ */
+int mport_fetch_bootstrap_index(mportInstance *mport)
+{
+  return fetch(mport, MPORT_BOOTSTRAP_INDEX_URL, MPORT_INDEX_FILE);
+}
 
 /* mport_fetch_bundle(mport, filename)
  *
@@ -112,12 +112,11 @@ int mport_fetch_bundle(mportInstance *mport, const char *filename)
   char *url;
   char *dest;
   int i;
+
+  MPORT_CHECK_FOR_INDEX(mport, "mport_fetch_bundle()");
   
   if (mport_index_get_mirror_list(mport, &mirrors) != MPORT_OK)
     RETURN_CURRENT_ERROR;
-    
-  if (mirrors == NULL) 
-    RETURN_ERROR(MPORT_ERR_NO_INDEX, "Attempt to fetch a file without an index.");
     
   asprintf(&dest, "%s/%s", MPORT_FETCH_STAGING_DIR, filename);
   
@@ -194,7 +193,9 @@ static int fetch(mportInstance *mport, const char *url, const char *dest)
     if (feof(remote))
       break;
   }
-
+  
+  fclose(local);
+  fclose(remote);
   (mport->progress_free_cb)();
 
   return MPORT_OK;

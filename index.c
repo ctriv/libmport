@@ -30,30 +30,54 @@
 #include "mport.h"
 #include "mport_private.h"
 
+static mport_is_recentish(mportInstance *);
 
 MPORT_PUBLIC_API int mport_index_load(mportInstance *mport)
 {
-  if (mport_fetch_index(mport) != MPORT_OK)
-    RETURN_CURRENT_ERROR;
+  if (mport_file_exists(MPORT_INDEX_FILE)) {
+    if (mport_db_do(mport->db, "ATTACH %Q AS index", MPORT_INDEX_FILE) != MPORT_OK)
+        RETURN_CURRENT_ERROR;
+        
+    mport->flags |= MPORT_INST_HAVE_INDEX;
+  
+    if (!index_is_recentish(mport)) {
+      if (mport_fetch_index(mport) != MPORT_OK)
+        RETURN_CURRENT_ERROR;
+        
+      if (mport_db_do(mport->db, "DETACH index") != MPORT_OK)
+        RETURN_CURRENT_ERROR;
+        
+      mport->flags &= ~MPORT_INST_HAVE_INDEX;
+        
+      if (mport_db_do(mport->db, "ATTACH %Q AS index", MPORT_INDEX_FILE) != MPORT_OK)
+        RETURN_CURRENT_ERROR;
+        
+      mport->flags |= MPORT_INST_HAVE_INDEX;
+    }
+  } else {
+    if (mport_fetch_bootstrap_index(mport)) != MPORT_OK)
+      RETURN_CURRENT_ERROR;
     
-  if (mport_db_do(mport->db, "ATTACH %Q AS index", MPORT_INDEX_FILE) != MPORT_OK)
-    RETURN_CURRENT_ERROR;
+    if (mport_db_do(mport->db, "ATTACH %Q AS index", MPORT_INDEX_FILE) != MPORT_OK)
+      RETURN_CURRENT_ERROR;
+      
+    mport->flags |= MPORT_INST_HAVE_INDEX;
+  }
+  
 
-  mport->flags |= MPORT_INST_HAVE_INDEX;
-    
   return MPORT_OK;
 }
 
 
-int mport_index_is_recentish(mportInstance *mport) 
+static int index_is_recentish(mportInstance *mport) 
 {
-  /* XXX WRITE ME */
-  return 1;
+    
 }  
 
 int mport_index_get_mirror_list(mportInstance *mport, char ***list_p)
 {
-  return MPORT_OK;
+    
+  
 }
 
 
