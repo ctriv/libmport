@@ -174,9 +174,10 @@ int mport_fetch_index(mportInstance *);
 int mport_fetch_bundle(mportInstance *, const char *);
 
 /* a few index things */
-int mport_index_is_recentish(mportInstance *);
 int mport_index_get_mirror_list(mportInstance *, char ***);
 
+#define MPORT_CHECK_FOR_INDEX(mport, func) if (!(mport->flags & MPORT_INST_HAVE_INDEX)) RETURN_ERRORX(MPORT_ERR_NO_INDEX, "Attempt to use %s before loading index.", func);
+#define MPORT_MAX_INDEX_AGE 3600 * 24 * 7 /* two weeks */
 
 /* Binaries we use */
 #define MPORT_MTREE_BIN		"/usr/sbin/mtree"
@@ -185,6 +186,5 @@ int mport_index_get_mirror_list(mportInstance *, char ***);
 
 #define MPORT_URL_MAX		512
 
-#define MPORT_CHECK_FOR_INDEX(mport, func) if (!(mport->flags & MPORT_INST_HAVE_INDEX)) RETURN_ERRORX(MPORT_ERR_NO_INDEX, "Attempt to use %s before loading index.", func);
 
 #endif /* _MPORT_PRIV_H_ */

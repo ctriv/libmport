@@ -30,6 +30,10 @@
 #include "mport.h"
 #include "mport_private.h"
 
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <time.h>
+
 static mport_is_recentish(mportInstance *);
 
 MPORT_PUBLIC_API int mport_index_load(mportInstance *mport)
@@ -71,7 +75,20 @@ MPORT_PUBLIC_API int mport_index_load(mportInstance *mport)
 
 static int index_is_recentish(mportInstance *mport) 
 {
+  struct stat st;
+  struct timespec now;
+  
+  
+  if (stat(MPORT_INDEX_FILE, &st) != 0) 
+    return 0;
+   
+  if (clock_gettime(CLOCK_REALTIME, &now) != 0) 
+    RETURN_ERROR(MPORT_ERR_SYSCALL_FAILED, strerror(errno));
+      
+  if ((stat.st_birthtime + MPORT_INDEX_MAX_AGE) < now.tv_sec) 
+    return 0;
     
+  return 1;
 }  
 
 int mport_index_get_mirror_list(mportInstance *mport, char ***list_p)
