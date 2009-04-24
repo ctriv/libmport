@@ -98,6 +98,6 @@ int mport_index_get_mirror_list(mportInstance *mport, char ***list_p)
 }
 
 
-int mport_index_lookup_pkgname(mportInstance *mport, const char *pkgname, mportIndexEntry **e)
+MPORT_PUBLIC_API int mport_index_lookup_pkgname(mportInstance *mport, const char *pkgname, mportIndexEntry **e)
 {
 }

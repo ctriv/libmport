@@ -121,6 +121,7 @@ int mport_pkgmeta_get_downdepends(mportInstance *, mportPackageMeta *, mportPack
 int mport_pkgmeta_get_updepends(mportInstance *, mportPackageMeta *, mportPackageMeta ***);
 
 
+/* index */
 typedef struct {
   char *pkgname;
   char *version;
@@ -130,7 +131,10 @@ typedef struct {
 } mportIndexEntry;
 
 int mport_index_load(mportInstance *);
+int mport_index_lookup_pkgname(mportInstance *, const char *, mportIndexEntry **);
 
+
+/* Package creation */
 
 typedef struct {
   char *pkg_filename;
@@ -146,7 +150,6 @@ typedef struct {
 mportCreateExtras * mport_createextras_new(void);
 void mport_createextras_free(mportCreateExtras *);
 
-/* Package creation */
 int mport_create_primative(mportAssetList *, mportPackageMeta *, mportCreateExtras *);
 
 /* Merge primative */
