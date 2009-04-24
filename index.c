@@ -93,11 +93,64 @@ static int index_is_recentish(mportInstance *mport)
 
 int mport_index_get_mirror_list(mportInstance *mport, char ***list_p)
 {
-    
+  char **list;
+  int len, ret, i;
+  sqlite3_stmt *stmt;
   
+  /* XXX the country is hard coded until a configuration system is created */    
+  if (mport_db_prepare(mport->db, "SELECT COUNT(*) FROM index.mirrors WHERE country='us'") != MPORT_OK)
+    RETURN_CURRENT_ERROR;
+
+  switch (sqlite3_step(stmt)) {
+    case SQLITE_ROW:
+      len = sqlite3_column_int(stmt, 0);
+      sqlite3_finalize(stmt);
+      break;
+    case SQLITE_DONE:
+      SET_ERROR(MPORT_ERR_INTERNAL, "A 'SELECT COUNT(*)...' statement returned no rows.");
+      sqlite3_finalize(stmt);
+      RETURN_CURRENT_ERROR;
+      break;
+    default:
+      SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(mport->db));
+      sqlite3_finalize(stmt);
+      RETURN_CURRENT_ERROR;
+  }
+  
+  list = calloc(len + 1, sizeof(char *));
+  *list_p = list;  
+  i = 0;
+    
+  if (mport_db_prepare(mport->db, "SELECT mirror FROM index.mirrors WHERE country='us'") != MPORT_OK)
+    RETURN_CURRENT_ERROR;
+    
+  while (1) {
+    ret = sqlite3_step(stmt);
+    
+    if (ret == SQLITE_ROW) {
+      list[i] = strdup(sqlite3_column_text(stmt, 0));
+      
+      if (list[i] == NULL) {
+        sqlite3_finalize(stmt);
+        return MPORT_ERR_NO_MEM;
+      }
+      
+      i++;
+    } else if (ret == SQLITE_DONE) {
+      list[i] = NULL;
+      break;
+    } else {
+      sqlite3_finalize(stmt);
+      RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(mport->db));
+    }
+  }
+  
+  sqlite3_finalize(stmt);
+  return MPORT_OK;
 }
 
-
+        
 MPORT_PUBLIC_API int mport_index_lookup_pkgname(mportInstance *mport, const char *pkgname, mportIndexEntry **e)
 {
+
 }
