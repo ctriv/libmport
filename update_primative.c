@@ -57,7 +57,7 @@ MPORT_PUBLIC_API int mport_update_primative(mportInstance *mport, const char *fi
     pkg = pkgs[i];
 
     if (
-        (mport_check_update_preconditions(mport, pkg) != MPORT_OK) 
+        (mport_check_preconditions(mport, pkg, MPORT_PRECHECK_UPGRADEABLE|MPORT_PRECHECK_CONFLICTS|MPORT_PRECHECK_DEPENDS) != MPORT_OK) 
                       ||
         (set_prefix_to_installed(mport, pkg) != MPORT_OK) 
                       || 

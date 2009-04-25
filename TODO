@@ -6,8 +6,6 @@ For library alpha 1:
 * mport_sort_pkg_list(), so you can say mport delete xfce* and have it do 
   in the right order
 * fix the progress bar for update.  
-* rewrite precondition checking to something like:
-	mport_check_preconditions(mport, pkg, MPORT_PRECHECK_CONFLICTS | MPORT_PRECHECK_DEPENDS);
 * mport_install()
 * mport_update()
 

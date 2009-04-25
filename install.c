@@ -35,29 +35,38 @@ static int resolve_depends(mportInstance *, mportPackageMeta *);
 
 MPORT_PUBLIC_API int mport_install(mportInstance *mport, const char *pkgname)
 {
-  char *bundlefile;
+  mportIndexEntry **e;
   char *filename;
-  int ret;
+  int ret = MPORT_OK, i;
 
   MPORT_CHECK_FOR_INDEX(mport, "mport_install()");
   
   if (mport_file_exists(pkgname)) 
     return install_bundle_file(pkgname);
   
-  if (mport_index_lookup_pkgname(mport, pkgname, &bundlefile) != MPORT_OK)
+  if (mport_index_lookup_pkgname(mport, pkgname, &e) != MPORT_OK)
     RETURN_CURRENT_ERROR;
-   
-  if (mport_fetch_bundle(mport, bundlefile) != MPORT_OK)
-    RETURN_CURRENT_ERROR;
-    
-  (void)asprintf(&filename, "%s/%s", MPORT_FETCH_STAGING_DIR, bundlefile);
-    
-  if (filename == NULL)
-    return MPORT_ERR_NO_MEM; 
-    
-  ret = install_bundle_file(mport, filename);
   
-  free(bundlefile);
+  for (i = 0; e[i] != NULL; i++) {   
+    if (mport_fetch_bundle(mport, bundlefile) != MPORT_OK)
+      RETURN_CURRENT_ERROR;
+    
+    (void)asprintf(&filename, "%s/%s", MPORT_FETCH_STAGING_DIR, bundlefile);
+    
+    if (filename == NULL) {
+      ret = MPORT_ERR_NO_MEM; 
+      break;
+    }
+    
+    ret = install_bundle_file(mport, filename);
+  
+    free(bundlefile);
+  
+    if (ret != MPORT_OK)
+      break;
+  }
+  
+  mport_free_index_entry_vec(e);
   
   return ret;
 }

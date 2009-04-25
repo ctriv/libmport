@@ -61,7 +61,7 @@ MPORT_PUBLIC_API int mport_install_primative(mportInstance *mport, const char *f
         return MPORT_ERR_NO_MEM;
     }
 
-    if ((mport_check_install_preconditions(mport, pkg) != MPORT_OK) 
+    if ((mport_check_preconditions(mport, pkg, MPORT_PRECHECK_INSTALLED|MPORT_PRECHECK_DEPENDS|MPORT_PRECHECK_CONFLICTS) != MPORT_OK) 
                       || 
         (mport_bundle_read_install_pkg(mport, bundle, pkg) != MPORT_OK)) 
     {

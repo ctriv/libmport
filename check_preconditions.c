@@ -36,33 +36,32 @@ static int check_depends(mportInstance *mport, mportPackageMeta *);
 static int check_if_older_installed(mportInstance *, mportPackageMeta *);
 
 
-/* check to see if the package is already installed, if it has any
- * conflicts, and that all its depends are installed.
+/* Run the checks requested by the flags given.
+ *
+ * Flags:
+ *   MPORT_PRECHECK_INSTALLED  -- Fail if the package is installed
+ *   MPORT_PRECHECK_UPGRADABLE -- Fail if an older version is not installed
+ *   MPORT_PRECHECK_CONFLICTS  -- Fail if the package has a conflict
+ *   MPORT_PRECHECK_DEPENDS    -- Fail if the the depends are no resolved
+ *
+ * The checks are run in the order listed above.  The first failure
+ * encountered is the one reported.   
+ *
+ * This function expects that the stub database for the given package is
+ * connected.
  */
-int mport_check_install_preconditions(mportInstance *mport, mportPackageMeta *pack) 
+ 
+int mport_check_preconditions(mportInstance *mport, mportPackageMeta *pack, int flags) 
 {
-  if (check_if_installed(mport->db, pack) != MPORT_OK)
+  if (flags & MPORT_PRECHECK_INSTALLED && check_if_installed(mport->db, pack) != MPORT_OK)
     RETURN_CURRENT_ERROR;
-  if (check_conflicts(mport->db, pack) != MPORT_OK)
+  if (flags & MPORT_PRECHECK_UPGRADEABLE && check_if_older_installed(mport, pack) != MPORT_OK)
     RETURN_CURRENT_ERROR;
-  if (check_depends(mport, pack) != MPORT_OK)
+  if (flags & MPORT_PRECHECK_CONFLICTS && check_conflicts(mport->db, pack) != MPORT_OK)
+    RETURN_CURRENT_ERROR;
+  if (flags & MPORT_PRECHECK_DEPENDS && check_depends(mport, pack) != MPORT_OK)
     RETURN_CURRENT_ERROR;
     
-  return MPORT_OK;
-}
-
-
-int mport_check_update_preconditions(mportInstance *mport, mportPackageMeta *pack) 
-{
-  if (
-    (check_if_older_installed(mport, pack) != MPORT_OK)
-                        ||
-    (check_conflicts(mport->db, pack) != MPORT_OK)
-                        ||
-    (check_depends(mport, pack) != MPORT_OK)
-  )
-      RETURN_CURRENT_ERROR;
-  
   return MPORT_OK;
 }
 
