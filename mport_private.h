@@ -171,6 +171,7 @@ int mport_set_errx(int , const char *, ...);
 #define MPORT_BOOTSTRAP_INDEX_URL 	"http://index.mport.midnightbsd.org/" MPORT_URL_PATH "/index.db.bz2"
 
 int mport_fetch_index(mportInstance *);
+int mport_fetch_bootstrap_index(mportInstance *);
 int mport_fetch_bundle(mportInstance *, const char *);
 
 /* a few index things */
