@@ -40,6 +40,16 @@
 static int index_is_recentish(mportInstance *);
 static int lookup_alias(mportInstance *, const char *, char **);
 
+/*
+ * Loads the index database.  The index contains a list of bundles that are
+ * available for download, a list of aliases (apache is aliased to apache22 for 
+ * example), and a list of mirrors.
+ *
+ * This function will use the current local index if it is present and younger
+ * than the max index age.  Otherwise, it will download the index.  If any 
+ * index is present, the mirror list will be used; otherwise the bootstrap
+ * url will be used.
+ */
 MPORT_PUBLIC_API int mport_index_load(mportInstance *mport)
 {
   if (mport_file_exists(MPORT_INDEX_FILE)) {
@@ -77,6 +87,7 @@ MPORT_PUBLIC_API int mport_index_load(mportInstance *mport)
 }
 
 
+/* return 1 if the index is younger than the max age, 0 otherwise */
 static int index_is_recentish(mportInstance *mport) 
 {
   struct stat st;
@@ -95,8 +106,12 @@ static int index_is_recentish(mportInstance *mport)
 }  
 
 
-
-
+/*
+ * Fills the string vector with the list of the mirrors for the current
+ * country.  
+ * 
+ * XXX - The country is currently hardcoded to the US.
+ */
 int mport_index_get_mirror_list(mportInstance *mport, char ***list_p)
 {
   char **list;
@@ -155,7 +170,14 @@ int mport_index_get_mirror_list(mportInstance *mport, char ***list_p)
   return MPORT_OK;
 }
 
-        
+/*
+ * Looks up a pkgname from the index and fills a vector of index entries
+ * with the result.
+ *
+ * Globbing is supported, and the alias list is consulted.  The calling code
+ * is responsible for freeing the memory allocated.  See
+ * mport_index_entry_free_vec()
+ */
 MPORT_PUBLIC_API int mport_index_lookup_pkgname(mportInstance *mport, const char *pkgname, mportIndexEntry ***entry_vec)
 {
   char *lookup;
@@ -190,6 +212,9 @@ MPORT_PUBLIC_API int mport_index_lookup_pkgname(mportInstance *mport, const char
   
   e = (mportIndexEntry **)calloc(count + 1, sizeof(mportIndexEntry *));
   *entry_vec = e;
+  
+  if (count == 0) 
+    return MPORT_OK;
   
   if (mport_db_prepare(mport->db, &stmt, "SELECT pkg, version, comment, www, bundlefile FROM index.packages WHERE pkg GLOB %Q", lookup) != MPORT_OK) {
     ret = mport_err_code();
@@ -257,3 +282,26 @@ static int lookup_alias(mportInstance *mport, const char *query, char **result)
   return ret;   
 }
 
+
+/* free a vector of mportIndexEntry structs */
+MPORT_PUBLIC_API void mport_index_entry_free_vec(mportIndexEntry **e)
+{
+  int i;
+  
+  for (i=0; e[i] != NULL; i++) 
+    mport_index_entry_free(e[i]);
+  
+  free(e);
+}
+
+
+/* free a mportIndexEntry struct */
+MPORT_PUBLIC_API void mport_index_entry_free(mportIndexEntry *e) 
+{
+  free(e->pkgname);
+  free(e->comment);
+  free(e->version);
+  free(e->www);
+  free(e->bundlefile);
+  free(e);
+}
