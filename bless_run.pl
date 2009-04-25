@@ -9,6 +9,9 @@ use Getopt::Std;
 use File::Path;
 use YAML qw(LoadFile);
 
+
+main();
+
 =head1 NAME
 
 bless_run.pl -- Promote A Run
