@@ -33,8 +33,12 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <time.h>
+#include <string.h>
+#include <stdlib.h>
+#include <errno.h>
 
-static mport_is_recentish(mportInstance *);
+static int index_is_recentish(mportInstance *);
+static int lookup_alias(mportInstance *, const char *, char **);
 
 MPORT_PUBLIC_API int mport_index_load(mportInstance *mport)
 {
@@ -59,7 +63,7 @@ MPORT_PUBLIC_API int mport_index_load(mportInstance *mport)
       mport->flags |= MPORT_INST_HAVE_INDEX;
     }
   } else {
-    if (mport_fetch_bootstrap_index(mport)) != MPORT_OK)
+    if (mport_fetch_bootstrap_index(mport) != MPORT_OK)
       RETURN_CURRENT_ERROR;
     
     if (mport_db_do(mport->db, "ATTACH %Q AS index", MPORT_INDEX_FILE) != MPORT_OK)
@@ -78,18 +82,20 @@ static int index_is_recentish(mportInstance *mport)
   struct stat st;
   struct timespec now;
   
-  
   if (stat(MPORT_INDEX_FILE, &st) != 0) 
     return 0;
    
   if (clock_gettime(CLOCK_REALTIME, &now) != 0) 
     RETURN_ERROR(MPORT_ERR_SYSCALL_FAILED, strerror(errno));
       
-  if ((stat.st_birthtime + MPORT_INDEX_MAX_AGE) < now.tv_sec) 
+  if ((st.st_birthtime + MPORT_MAX_INDEX_AGE) < now.tv_sec) 
     return 0;
     
   return 1;
 }  
+
+
+
 
 int mport_index_get_mirror_list(mportInstance *mport, char ***list_p)
 {
@@ -98,7 +104,7 @@ int mport_index_get_mirror_list(mportInstance *mport, char ***list_p)
   sqlite3_stmt *stmt;
   
   /* XXX the country is hard coded until a configuration system is created */    
-  if (mport_db_prepare(mport->db, "SELECT COUNT(*) FROM index.mirrors WHERE country='us'") != MPORT_OK)
+  if (mport_db_prepare(mport->db, &stmt, "SELECT COUNT(*) FROM index.mirrors WHERE country='us'") != MPORT_OK)
     RETURN_CURRENT_ERROR;
 
   switch (sqlite3_step(stmt)) {
@@ -121,7 +127,7 @@ int mport_index_get_mirror_list(mportInstance *mport, char ***list_p)
   *list_p = list;  
   i = 0;
     
-  if (mport_db_prepare(mport->db, "SELECT mirror FROM index.mirrors WHERE country='us'") != MPORT_OK)
+  if (mport_db_prepare(mport->db, &stmt, "SELECT mirror FROM index.mirrors WHERE country='us'") != MPORT_OK)
     RETURN_CURRENT_ERROR;
     
   while (1) {
@@ -150,7 +156,104 @@ int mport_index_get_mirror_list(mportInstance *mport, char ***list_p)
 }
 
         
-MPORT_PUBLIC_API int mport_index_lookup_pkgname(mportInstance *mport, const char *pkgname, mportIndexEntry **e)
+MPORT_PUBLIC_API int mport_index_lookup_pkgname(mportInstance *mport, const char *pkgname, mportIndexEntry ***entry_vec)
 {
+  char *lookup;
+  int count, i, step;
+  sqlite3_stmt *stmt;
+  int ret = MPORT_OK;
+  mportIndexEntry **e;
+  
+  MPORT_CHECK_FOR_INDEX(mport, "mport_index_lookup_pkgname()")
+  
+  if (lookup_alias(mport, pkgname, &lookup) != MPORT_OK)
+    RETURN_CURRENT_ERROR;
 
+  if (mport_db_prepare(mport->db, &stmt, "SELECT COUNT(*) FROM index.packages WHERE pkg GLOB %Q", lookup) != MPORT_OK)
+    RETURN_CURRENT_ERROR;
+    
+  switch (sqlite3_step(stmt)) {
+    case SQLITE_ROW:
+      count = sqlite3_column_int(stmt, 0);
+      break;
+    case SQLITE_DONE:
+      ret = SET_ERROR(MPORT_ERR_INTERNAL, "No rows returned from a 'SELECT COUNT(*)' query.");
+      goto DONE;
+      break;
+    default:
+      ret = SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(mport->db));
+      goto DONE;
+      break;
+  }
+  
+  sqlite3_finalize(stmt);
+  
+  e = (mportIndexEntry **)calloc(count + 1, sizeof(mportIndexEntry *));
+  *entry_vec = e;
+  
+  if (mport_db_prepare(mport->db, &stmt, "SELECT pkg, version, comment, www, bundlefile FROM index.packages WHERE pkg GLOB %Q", lookup) != MPORT_OK) {
+    ret = mport_err_code();
+    goto DONE;
+  }
+  
+  while (1) {
+    step = sqlite3_step(stmt);
+    
+    if (step == SQLITE_ROW) {
+      if ((e[i] = (mportIndexEntry *)malloc(sizeof(mportIndexEntry))) == NULL) {
+        ret = MPORT_ERR_NO_MEM;
+        goto DONE;
+      }
+      
+      e[i]->pkgname    = strdup(sqlite3_column_text(stmt, 0));
+      e[i]->version    = strdup(sqlite3_column_text(stmt, 1));
+      e[i]->comment    = strdup(sqlite3_column_text(stmt, 2));
+      e[i]->www        = strdup(sqlite3_column_text(stmt, 3));
+      e[i]->bundlefile = strdup(sqlite3_column_text(stmt, 4));
+      
+      if (e[i]->pkgname == NULL || e[i]->version == NULL || e[i]->comment == NULL || e[i]->www == NULL || e[i]->bundlefile == NULL) {
+        ret = MPORT_ERR_NO_MEM;
+        goto DONE;
+      }
+      
+      i++;
+    } else if (step == SQLITE_DONE) {
+      e[i] = NULL;
+      goto DONE;
+    } else {
+      ret = SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(mport->db));
+      goto DONE;
+    }
+  }
+      
+  DONE:
+    free(lookup);
+    sqlite3_finalize(stmt);
+    return ret; 
 }
+
+
+static int lookup_alias(mportInstance *mport, const char *query, char **result) 
+{
+  sqlite3_stmt *stmt;
+  int ret = MPORT_OK;
+  
+  if (mport_db_prepare(mport->db, &stmt, "SELECT pkg FROM index.aliases WHERE alias=%Q", query) != MPORT_OK)
+    RETURN_CURRENT_ERROR;
+  
+  switch (sqlite3_step(stmt)) {
+    case SQLITE_ROW:
+      *result = strdup(sqlite3_column_text(stmt, 0));
+      break;
+    case SQLITE_DONE:
+      *result = strdup(query);
+      break;
+    default:
+      ret = SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(mport->db));
+      break;
+  }
+  
+  sqlite3_finalize(stmt);
+  return ret;   
+}
+

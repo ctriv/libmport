@@ -131,7 +131,7 @@ typedef struct {
 } mportIndexEntry;
 
 int mport_index_load(mportInstance *);
-int mport_index_lookup_pkgname(mportInstance *, const char *, mportIndexEntry **);
+int mport_index_lookup_pkgname(mportInstance *, const char *, mportIndexEntry ***);
 
 
 /* Package creation */
