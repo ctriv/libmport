@@ -170,30 +170,12 @@ static int check_depends(mportInstance *mport, mportPackageMeta *pack)
           if (depend_version == NULL)
             /* no minimum version */
             break;
-
-          /* break out the compare op at the front of the version string */          
-          if (depend_version[0] == '<') {
-            if (depend_version[1] == '=') {
-              depend_version += 2;
-              ok = (mport_version_cmp(inst_version, depend_version) <= 0);
-            } else {
-              depend_version++;
-              ok = (mport_version_cmp(inst_version, depend_version) < 0);
-            }
-          } else if (depend_version[0] == '>') {
-            if (depend_version[1] == '=') {
-              depend_version += 2;
-              ok = (mport_version_cmp(inst_version, depend_version) >= 0);
-            } else {
-              depend_version++;
-              ok = (mport_version_cmp(inst_version, depend_version) > 0);
-            }
-          } else {
-            sqlite3_finalize(lookup); sqlite3_finalize(stmt);
-            RETURN_ERRORX(MPORT_ERR_FATAL, "Maformed depend version for %s: %s", depend_pkg, depend_version);
-          }
-
-          if (!ok) {
+            
+          ok = mport_version_require_check(inst_version, depend_version);
+          
+          if (ok > 0) {
+            RETURN_CURRENT_ERROR;
+          } else if (ok == -1) {
             SET_ERRORX(MPORT_ERR_FATAL, "%s depends on %s version %s.  Version %s is installed.", pack->name, depend_pkg, depend_version, inst_version);
             sqlite3_finalize(lookup); sqlite3_finalize(stmt);
             RETURN_CURRENT_ERROR;

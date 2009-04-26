@@ -136,7 +136,7 @@ static int resolve_depends(mportInstance *mport, mportPackageMeta *pkg, const ch
 {
   sqlite3_stmt *stmt, *lookup;
   char *dname, *dversion, *iversion;
-  int step;
+  int step, check;
   
   if (mport_db_prepare(mport->db, &stmt, "SELECT depend_pkgname, depend_version FROM stub.depends WHERE pkg=%Q", pkg->name) != MPORT_OK)
     RETURN_CURRENT_ERROR;
@@ -164,12 +164,16 @@ static int resolve_depends(mportInstance *mport, mportPackageMeta *pkg, const ch
             break;
         
           iversion = (char *)sqlite3_column_text(stmt, 0);
-            
-          if (mport_version_cmp_withop(iversion, dversion) != MPORT_OK) {
+          
+          check = mport_version_require_check(iversion, dversion);
+          
+          if (check == -1) {
             /* we need to upgrade */
             if (mport_upgrade(mport, dname) != MPORT_OK)
               RETURN_CURRENT_ERROR;
-          } 
+          } else if (check > 0) {
+            RETURN_CURRENT_ERROR;
+          }
           
           break;
         case SQLITE_DONE:

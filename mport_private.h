@@ -120,9 +120,9 @@ int mport_bundle_read_install_pkg(mportInstance *, mportBundleRead *, mportPacka
 int mport_bundle_read_update_pkg(mportInstance *, mportBundleRead *, mportPackageMeta *);
 
 
-/* sqlite version compare function */
+/* version compare functions */
 void mport_version_cmp_sqlite(sqlite3_context *, int, sqlite3_value **);
-
+int mport_version_require_check(char *, char *);
 
 #define RETURN_CURRENT_ERROR return mport_err_code()
 #define RETURN_ERROR(code, msg) return mport_set_errx((code), "Error at %s:(%d): %s", __FILE__, __LINE__, (msg))
