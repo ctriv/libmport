@@ -195,6 +195,7 @@ const char * mport_err_string(void);
 #define MPORT_ERR_NOT_UPGRADABLE	18
 #define MPORT_ERR_FETCH			19
 #define MPORT_ERR_NO_INDEX		20
+#define MPORT_ERR_ABIGUOUS_ID		21
 
 /* Utils */
 void mport_parselist(char *, char ***);

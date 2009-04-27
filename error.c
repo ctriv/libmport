@@ -58,7 +58,8 @@ static char *mport_err_defaults[] = {
   "Bundle file was malformed.",
   "Package is not upgradable",
   "Fetch failed.",
-  "Attempt to use the index without loading it."
+  "Attempt to use the index without loading it.",
+  "Ambiguous identifier."
 };
   
 
