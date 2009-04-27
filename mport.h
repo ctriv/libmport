@@ -157,6 +157,7 @@ int mport_create_primative(mportAssetList *, mportPackageMeta *, mportCreateExtr
 int mport_merge_primative(const char **, const char *);
 
 /* Package installation */
+int mport_install(mportInstance *, const char *);
 int mport_install_primative(mportInstance *, const char *, const char *);
 
 /* package updating */
@@ -195,7 +196,7 @@ const char * mport_err_string(void);
 #define MPORT_ERR_NOT_UPGRADABLE	18
 #define MPORT_ERR_FETCH			19
 #define MPORT_ERR_NO_INDEX		20
-#define MPORT_ERR_ABIGUOUS_ID		21
+#define MPORT_ERR_AMBIGUOUS_ID		21
 
 /* Utils */
 void mport_parselist(char *, char ***);
