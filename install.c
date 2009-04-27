@@ -29,50 +29,67 @@
 
 #include "mport.h"
 #include "mport_private.h"
+#include <stdlib.h>
+#include <string.h>
 
-static int install_bundle_file(mportInstance *, const char *);
+static int install_bundle_file(mportInstance *, const char *, const char *);
 static int resolve_depends(mportInstance *, mportPackageMeta *);
 
-MPORT_PUBLIC_API int mport_install(mportInstance *mport, const char *pkgname)
+MPORT_PUBLIC_API int mport_install(mportInstance *mport, const char *pkgname, const char *prefix)
 {
   mportIndexEntry **e;
   char *filename;
-  int ret = MPORT_OK, i;
+  int ret = MPORT_OK;
 
   MPORT_CHECK_FOR_INDEX(mport, "mport_install()");
   
   if (mport_file_exists(pkgname)) 
-    return install_bundle_file(pkgname);
+    return install_bundle_file(mport, pkgname, prefix);
   
   if (mport_index_lookup_pkgname(mport, pkgname, &e) != MPORT_OK)
     RETURN_CURRENT_ERROR;
+
+  /* we don't support installing more than one top-level package at a time.
+   * Consider a situation like this:
+   *
+   * mport_install(mport, "p5-Class-DBI*");
+   *
+   * Say this matches p5-Class-DBI and p5-Class-DBI-AbstractSearch
+   * and say the order from the index puts p5-Class-DBI-AbstractSearch 
+   * first.
+   * 
+   * p5-Class-DBI-AbstractSearch is installed, and its depends installed.  
+   * However, p5-Class-DBI is a depend of p5-Class-DBI-AbstractSearch, so 
+   * when it comes time to install p5-Class-DBI, we can't - because it is
+   * already installed.
+   *
+   * If a user facing application wants this functionality, it would be
+   * easy to piece together with mport_index_lookup_pkgname(), a
+   * check for already installed packages, and mport_install().
+   */
   
-  for (i = 0; e[i] != NULL; i++) {   
-    if (mport_fetch_bundle(mport, bundlefile) != MPORT_OK)
+  if (e[1] != NULL)
+    RETURN_ERRORX(MPORT_ERR_AMBIGUOUS_ID, "Could not resolve '%s' to a single package.", pkgname);
+  
+  if (mport_fetch_bundle(mport, e[0]->bundlefile) != MPORT_OK)
       RETURN_CURRENT_ERROR;
     
-    (void)asprintf(&filename, "%s/%s", MPORT_FETCH_STAGING_DIR, bundlefile);
+  (void)asprintf(&filename, "%s/%s", MPORT_FETCH_STAGING_DIR, e[0]->bundlefile);
     
-    if (filename == NULL) {
-      ret = MPORT_ERR_NO_MEM; 
-      break;
-    }
+  if (filename == NULL) 
+    return MPORT_ERR_NO_MEM; 
     
-    ret = install_bundle_file(mport, filename);
+  ret = install_bundle_file(mport, filename, prefix);
   
-    free(bundlefile);
+  free(filename);
   
-    if (ret != MPORT_OK)
-      break;
-  }
-  
-  mport_free_index_entry_vec(e);
+  mport_index_entry_free_vec(e);
   
   return ret;
 }
 
 
-static int install_bundle_file(mportInstnace *mport, const char *filename)
+static int install_bundle_file(mportInstance *mport, const char *filename, const char *prefix)
 {
   mportBundleRead *bundle;
   mportPackageMeta **pkgs, *pkg;
@@ -103,12 +120,13 @@ static int install_bundle_file(mportInstnace *mport, const char *filename)
     if (resolve_depends(mport, pkg) != MPORT_OK)
       RETURN_CURRENT_ERROR;
 
-    if ((mport_check_install_preconditions(mport, pkg) != MPORT_OK) 
+    if ((mport_check_preconditions(mport, pkg, MPORT_PRECHECK_INSTALLED|MPORT_PRECHECK_CONFLICTS) != MPORT_OK) 
                       || 
         (mport_bundle_read_install_pkg(mport, bundle, pkg) != MPORT_OK)) 
     {
-      mport_call_msg_cb(mport, "Unable to install %s-%s: %s", pkg->name, pkg->version, mport_err_string());
-      mport_set_err(MPORT_OK, NULL);
+      RETURN_CURRENT_ERROR;
     }
   }
+  
+  return MPORT_OK;
 }
