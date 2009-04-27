@@ -69,7 +69,7 @@ MPORT_PUBLIC_API int mport_install(mportInstance *mport, const char *pkgname, co
    */
   
   if (e[1] != NULL)
-    RETURN_ERRORX(MPORT_ERR_AMBIGUOUS_ID, "Could not resolve '%s' to a single package.", pkgname);
+    RETURN_ERRORX(MPORT_ERR_FATAL, "Could not resolve '%s' to a single package.", pkgname);
   
   if (mport_fetch_bundle(mport, e[0]->bundlefile) != MPORT_OK)
       RETURN_CURRENT_ERROR;
@@ -77,7 +77,7 @@ MPORT_PUBLIC_API int mport_install(mportInstance *mport, const char *pkgname, co
   (void)asprintf(&filename, "%s/%s", MPORT_FETCH_STAGING_DIR, e[0]->bundlefile);
     
   if (filename == NULL) 
-    return MPORT_ERR_NO_MEM; 
+    RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory."); 
     
   ret = install_bundle_file(mport, filename, prefix);
   
@@ -96,7 +96,7 @@ static int install_bundle_file(mportInstance *mport, const char *filename, const
   int i;
   
   if ((bundle = mport_bundle_read_new()) == NULL)
-    return MPORT_ERR_NO_MEM;
+    RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
   
   if (mport_bundle_read_init(bundle, filename) != MPORT_OK)
     RETURN_CURRENT_ERROR;
@@ -114,7 +114,7 @@ static int install_bundle_file(mportInstance *mport, const char *filename, const
       /* override the default prefix with the given prefix */
       free(pkg->prefix);
       if ((pkg->prefix = strdup(prefix)) == NULL) /* all hope is lost! bail */
-        return MPORT_ERR_NO_MEM;
+        RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
     }
 
     if (resolve_depends(mport, pkg) != MPORT_OK)

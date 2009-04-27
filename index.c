@@ -97,7 +97,7 @@ static int index_is_recentish(mportInstance *mport)
     return 0;
    
   if (clock_gettime(CLOCK_REALTIME, &now) != 0) 
-    RETURN_ERROR(MPORT_ERR_SYSCALL_FAILED, strerror(errno));
+    RETURN_ERROR(MPORT_ERR_FATAL, strerror(errno));
       
   if ((st.st_birthtime + MPORT_MAX_INDEX_AGE) < now.tv_sec) 
     return 0;
@@ -128,12 +128,12 @@ int mport_index_get_mirror_list(mportInstance *mport, char ***list_p)
       sqlite3_finalize(stmt);
       break;
     case SQLITE_DONE:
-      SET_ERROR(MPORT_ERR_INTERNAL, "A 'SELECT COUNT(*)...' statement returned no rows.");
+      SET_ERROR(MPORT_ERR_FATAL, "A 'SELECT COUNT(*)...' statement returned no rows.");
       sqlite3_finalize(stmt);
       RETURN_CURRENT_ERROR;
       break;
     default:
-      SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(mport->db));
+      SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
       sqlite3_finalize(stmt);
       RETURN_CURRENT_ERROR;
   }
@@ -153,7 +153,7 @@ int mport_index_get_mirror_list(mportInstance *mport, char ***list_p)
       
       if (list[i] == NULL) {
         sqlite3_finalize(stmt);
-        return MPORT_ERR_NO_MEM;
+        RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
       }
       
       i++;
@@ -162,7 +162,7 @@ int mport_index_get_mirror_list(mportInstance *mport, char ***list_p)
       break;
     } else {
       sqlite3_finalize(stmt);
-      RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(mport->db));
+      RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
     }
   }
   
@@ -199,11 +199,11 @@ MPORT_PUBLIC_API int mport_index_lookup_pkgname(mportInstance *mport, const char
       count = sqlite3_column_int(stmt, 0);
       break;
     case SQLITE_DONE:
-      ret = SET_ERROR(MPORT_ERR_INTERNAL, "No rows returned from a 'SELECT COUNT(*)' query.");
+      ret = SET_ERROR(MPORT_ERR_FATAL, "No rows returned from a 'SELECT COUNT(*)' query.");
       goto DONE;
       break;
     default:
-      ret = SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(mport->db));
+      ret = SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
       goto DONE;
       break;
   }
@@ -226,7 +226,7 @@ MPORT_PUBLIC_API int mport_index_lookup_pkgname(mportInstance *mport, const char
     
     if (step == SQLITE_ROW) {
       if ((e[i] = (mportIndexEntry *)malloc(sizeof(mportIndexEntry))) == NULL) {
-        ret = MPORT_ERR_NO_MEM;
+        ret = MPORT_ERR_FATAL;
         goto DONE;
       }
       
@@ -237,7 +237,7 @@ MPORT_PUBLIC_API int mport_index_lookup_pkgname(mportInstance *mport, const char
       e[i]->bundlefile = strdup(sqlite3_column_text(stmt, 4));
       
       if (e[i]->pkgname == NULL || e[i]->version == NULL || e[i]->comment == NULL || e[i]->www == NULL || e[i]->bundlefile == NULL) {
-        ret = MPORT_ERR_NO_MEM;
+        ret = MPORT_ERR_FATAL;
         goto DONE;
       }
       
@@ -246,7 +246,7 @@ MPORT_PUBLIC_API int mport_index_lookup_pkgname(mportInstance *mport, const char
       e[i] = NULL;
       goto DONE;
     } else {
-      ret = SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(mport->db));
+      ret = SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
       goto DONE;
     }
   }
@@ -274,7 +274,7 @@ static int lookup_alias(mportInstance *mport, const char *query, char **result)
       *result = strdup(query);
       break;
     default:
-      ret = SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(mport->db));
+      ret = SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
       break;
   }
   

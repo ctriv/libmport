@@ -71,13 +71,13 @@ MPORT_PUBLIC_API int mport_instance_init(mportInstance *mport, const char *root)
   (void)snprintf(dir, FILENAME_MAX, "%s/%s", mport->root, MPORT_MASTER_DB_FILE);
   if (sqlite3_open(dir, &(mport->db)) != 0) {
     sqlite3_close(mport->db);
-    RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(mport->db));
+    RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
   }
   
   
   if (sqlite3_create_function(mport->db, "mport_version_cmp", 2, SQLITE_ANY, NULL, &mport_version_cmp_sqlite, NULL, NULL) != SQLITE_OK) {
     sqlite3_close(mport->db);
-    RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(mport->db));
+    RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
   }
   
   /* set the default UI callbacks */
@@ -163,7 +163,7 @@ void mport_call_progress_init_cb(mportInstance *mport, const char *fmt, ...)
 MPORT_PUBLIC_API int mport_instance_free(mportInstance *mport) 
 {
   if (sqlite3_close(mport->db) != SQLITE_OK) {
-    RETURN_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(mport->db));
+    RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
   }
   
   free(mport->root);  

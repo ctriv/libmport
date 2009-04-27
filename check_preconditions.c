@@ -83,14 +83,14 @@ static int check_if_installed(sqlite3 *db, mportPackageMeta *pack)
       /* Row was found */
       inst_version = sqlite3_column_text(stmt, 0);
       
-      SET_ERRORX(MPORT_ERR_ALREADY_INSTALLED, "%s (version %s) is already installed.", pack->name, inst_version);
+      SET_ERRORX(MPORT_ERR_FATAL, "%s (version %s) is already installed.", pack->name, inst_version);
       sqlite3_finalize(stmt);
       RETURN_CURRENT_ERROR;
 
       break;
     default:
       /* Some sort of sqlite error */
-      SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
+      SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
       sqlite3_finalize(stmt);
       RETURN_CURRENT_ERROR;
   }
@@ -115,14 +115,14 @@ static int check_conflicts(sqlite3 *db, mportPackageMeta *pack)
         inst_name    = sqlite3_column_text(stmt, 0);
         inst_version = sqlite3_column_text(stmt, 1);
         
-        SET_ERRORX(MPORT_ERR_CONFLICTS, "Installed package %s-%s conflicts with %s", inst_name, inst_version, pack->name);
+        SET_ERRORX(MPORT_ERR_FATAL, "Installed package %s-%s conflicts with %s", inst_name, inst_version, pack->name);
         sqlite3_finalize(stmt);
         RETURN_CURRENT_ERROR;
     } else if (ret == SQLITE_DONE) {
       /* No conflicts */
       break;
     } else {
-      SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
+      SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
       sqlite3_finalize(stmt);
       RETURN_CURRENT_ERROR;
     }
@@ -157,7 +157,7 @@ static int check_depends(mportInstance *mport, mportPackageMeta *pack)
       depend_version = sqlite3_column_text(stmt, 1);
       
       if (sqlite3_bind_text(lookup, 1, depend_pkg, -1, SQLITE_STATIC) != SQLITE_OK) {
-        SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
+        SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
         sqlite3_finalize(lookup); sqlite3_finalize(stmt);
         RETURN_CURRENT_ERROR;
       }
@@ -190,11 +190,11 @@ static int check_depends(mportInstance *mport, mportPackageMeta *pack)
             }
           } else {
             sqlite3_finalize(lookup); sqlite3_finalize(stmt);
-            RETURN_ERRORX(MPORT_ERR_MALFORMED_DEPEND, "Maformed depend version for %s: %s", depend_pkg, depend_version);
+            RETURN_ERRORX(MPORT_ERR_FATAL, "Maformed depend version for %s: %s", depend_pkg, depend_version);
           }
 
           if (!ok) {
-            SET_ERRORX(MPORT_ERR_MISSING_DEPEND, "%s depends on %s version %s.  Version %s is installed.", pack->name, depend_pkg, depend_version, inst_version);
+            SET_ERRORX(MPORT_ERR_FATAL, "%s depends on %s version %s.  Version %s is installed.", pack->name, depend_pkg, depend_version, inst_version);
             sqlite3_finalize(lookup); sqlite3_finalize(stmt);
             RETURN_CURRENT_ERROR;
           }
@@ -203,12 +203,12 @@ static int check_depends(mportInstance *mport, mportPackageMeta *pack)
         case SQLITE_DONE:
           /* this depend isn't installed. */
            /* this depend isn't installed. */
-           SET_ERRORX(MPORT_ERR_MISSING_DEPEND, "%s depends on %s, which is not installed.", pack->name, depend_pkg);
+           SET_ERRORX(MPORT_ERR_FATAL, "%s depends on %s, which is not installed.", pack->name, depend_pkg);
            sqlite3_finalize(lookup); sqlite3_finalize(stmt);
            RETURN_CURRENT_ERROR;
           break;
         default:
-          SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
+          SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
           sqlite3_finalize(lookup); sqlite3_finalize(stmt);
           RETURN_CURRENT_ERROR;
       }
@@ -219,7 +219,7 @@ static int check_depends(mportInstance *mport, mportPackageMeta *pack)
       /* No more depends to check. */
       break;
     } else {
-      SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(db));
+      SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
       sqlite3_finalize(lookup); sqlite3_finalize(stmt);
       RETURN_CURRENT_ERROR;
     }
@@ -242,10 +242,10 @@ static int check_if_older_installed(mportInstance *mport, mportPackageMeta *pkg)
       ret = MPORT_OK;
       break;
     case SQLITE_DONE:
-      ret = SET_ERRORX(MPORT_ERR_NOT_UPGRADABLE, "No older version of %s installed", pkg->name);
+      ret = SET_ERRORX(MPORT_ERR_FATAL, "No older version of %s installed", pkg->name);
       break;
     default:
-      ret = SET_ERROR(MPORT_ERR_SQLITE, sqlite3_errmsg(mport->db));
+      ret = SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
       break;
   }
   

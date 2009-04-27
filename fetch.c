@@ -59,7 +59,7 @@ int mport_fetch_index(mportInstance *mport)
   asprintf(&dest, "%s/%s.bz2", MPORT_FETCH_STAGING_DIR, MPORT_INDEX_FILE);
   
   if (dest == NULL)
-    return MPORT_ERR_NO_MEM;
+    RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
 
   if (mport_index_get_mirror_list(mport, &mirrors) != MPORT_OK)
     RETURN_CURRENT_ERROR;
@@ -70,7 +70,7 @@ int mport_fetch_index(mportInstance *mport)
     if (url == NULL) {
       free(dest);
       mport_free_vec(mirrors);
-      return MPORT_ERR_NO_MEM;
+      RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
     }
 
     if (fetch(mport, url, MPORT_INDEX_FILE) == MPORT_OK) {
@@ -85,7 +85,7 @@ int mport_fetch_index(mportInstance *mport)
     
   free(dest);
   mport_free_vec(mirrors);
-  RETURN_ERRORX(MPORT_ERR_FETCH, "Unable to fetch index file: %s", mport_err_string());
+  RETURN_ERRORX(MPORT_ERR_FATAL, "Unable to fetch index file: %s", mport_err_string());
 }
 
 
@@ -135,7 +135,7 @@ int mport_fetch_bundle(mportInstance *mport, const char *filename)
   
   free(dest);
   mport_free_vec(mirrors); 
-  RETURN_ERRORX(MPORT_ERR_FETCH, "Unable to fetch %s: %s", filename, mport_err_string());
+  RETURN_ERRORX(MPORT_ERR_FATAL, "Unable to fetch %s: %s", filename, mport_err_string());
 }
 
 
@@ -152,7 +152,7 @@ static int fetch(mportInstance *mport, const char *url, const char *dest)
   size_t wrote;
   
   if ((local = fopen(dest, "w")) == NULL) {
-    RETURN_ERRORX(MPORT_ERR_FILEIO, "Unable to open %s: %s", dest, strerror(errno));
+    RETURN_ERRORX(MPORT_ERR_FATAL, "Unable to open %s: %s", dest, strerror(errno));
   }
 
   mport_call_progress_init_cb(mport, "Downloading %s", url);
@@ -160,7 +160,7 @@ static int fetch(mportInstance *mport, const char *url, const char *dest)
   if ((remote = fetchXGetURL(url, &stat, "p")) == NULL) {
     fclose(local);
     unlink(dest);
-    RETURN_ERRORX(MPORT_ERR_FETCH, "Fetch error: %s: %s", url, fetchLastErrString);
+    RETURN_ERRORX(MPORT_ERR_FATAL, "Fetch error: %s: %s", url, fetchLastErrString);
   }
   
   while (1) {
@@ -171,7 +171,7 @@ static int fetch(mportInstance *mport, const char *url, const char *dest)
         fclose(local);
         fclose(remote);
         unlink(dest);
-        RETURN_ERRORX(MPORT_ERR_FETCH, "Fetch error: %s: %s", url, fetchLastErrString);  
+        RETURN_ERRORX(MPORT_ERR_FATAL, "Fetch error: %s: %s", url, fetchLastErrString);  
       } else if (feof(remote)) {
         /* do nothing */
       } 
@@ -186,7 +186,7 @@ static int fetch(mportInstance *mport, const char *url, const char *dest)
       if (wrote < size) {
         fclose(local); fclose(remote);
         unlink(dest);
-        RETURN_ERRORX(MPORT_ERR_FILEIO, "Write error %s: %s", dest, strerror(errno));
+        RETURN_ERRORX(MPORT_ERR_FATAL, "Write error %s: %s", dest, strerror(errno));
       }
     }
 
