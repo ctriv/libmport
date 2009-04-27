@@ -33,7 +33,7 @@
 #include <string.h>
 
 static int install_bundle_file(mportInstance *, const char *, const char *);
-static int resolve_depends(mportInstance *, mportPackageMeta *);
+static int resolve_depends(mportInstance *, mportPackageMeta *, const char *);
 
 MPORT_PUBLIC_API int mport_install(mportInstance *mport, const char *pkgname, const char *prefix)
 {
@@ -117,7 +117,7 @@ static int install_bundle_file(mportInstance *mport, const char *filename, const
         RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
     }
 
-    if (resolve_depends(mport, pkg) != MPORT_OK)
+    if (resolve_depends(mport, pkg, prefix) != MPORT_OK)
       RETURN_CURRENT_ERROR;
 
     if ((mport_check_preconditions(mport, pkg, MPORT_PRECHECK_INSTALLED|MPORT_PRECHECK_CONFLICTS) != MPORT_OK) 
@@ -129,4 +129,70 @@ static int install_bundle_file(mportInstance *mport, const char *filename, const
   }
   
   return MPORT_OK;
+}
+
+
+static int resolve_depends(mportInstance *mport, mportPackageMeta *pkg, const char *prefix)
+{
+  sqlite3_stmt *stmt, *lookup;
+  char *dname, *dversion, *iversion;
+  int step;
+  
+  if (mport_db_prepare(mport->db, &stmt, "SELECT depend_pkgname, depend_version FROM stub.depends WHERE pkg=%Q", pkg->name) != MPORT_OK)
+    RETURN_CURRENT_ERROR;
+  
+  if (mport_db_prepare(mport->db, &lookup, "SELECT version FROM packages WHERE pkg=? AND status='clean'") != MPORT_OK)
+    RETURN_CURRENT_ERROR;
+    
+  while (1) {
+    step = sqlite3_step(stmt);
+    
+    if (step == SQLITE_ROW) {
+      dname    = (char *)sqlite3_column_text(stmt, 0); 
+      dversion = (char *)sqlite3_column_text(stmt, 1);
+
+      if (sqlite3_bind_text(lookup, 1, dname, -1, SQLITE_STATIC) != SQLITE_OK) {
+        SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
+        sqlite3_finalize(stmt); sqlite3_finalize(lookup);
+        RETURN_CURRENT_ERROR;
+      }
+
+      switch (sqlite3_step(lookup)) {
+        case SQLITE_ROW:
+          if (dversion == NULL)
+            /* no minimal version */
+            break;
+        
+          iversion = (char *)sqlite3_column_text(stmt, 0);
+            
+          if (mport_version_cmp_withop(iversion, dversion) != MPORT_OK) {
+            /* we need to upgrade */
+            if (mport_upgrade(mport, dname) != MPORT_OK)
+              RETURN_CURRENT_ERROR;
+          } 
+          
+          break;
+        case SQLITE_DONE:
+          if (mport_install(mport, dname, prefix) != MPORT_OK)
+            RETURN_CURRENT_ERROR;
+            
+          break;
+        default:
+          sqlite3_finalize(lookup); sqlite3_finalize(stmt);
+          RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
+          break;
+      }
+      
+      sqlite3_reset(lookup);
+      sqlite3_clear_bindings(lookup);
+    } else if (step == SQLITE_DONE) {
+      break;
+    } else {
+      sqlite3_finalize(lookup); sqlite3_finalize(stmt);
+      RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
+    }
+  }
+  
+  sqlite3_finalize(lookup); sqlite3_finalize(stmt);
+  return MPORT_OK;           
 }
