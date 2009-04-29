@@ -171,7 +171,7 @@ static int check_depends(mportInstance *mport, mportPackageMeta *pack)
             /* no minimum version */
             break;
             
-          ok = mport_version_require_check(inst_version, depend_version);
+          ok = mport_version_require_check((char *)inst_version, (char *)depend_version);
           
           if (ok > 0) {
             RETURN_CURRENT_ERROR;
