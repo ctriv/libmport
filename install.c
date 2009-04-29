@@ -120,12 +120,11 @@ static int install_bundle_file(mportInstance *mport, const char *filename, const
     if (resolve_depends(mport, pkg, prefix) != MPORT_OK)
       RETURN_CURRENT_ERROR;
 
-    if ((mport_check_preconditions(mport, pkg, MPORT_PRECHECK_INSTALLED|MPORT_PRECHECK_CONFLICTS) != MPORT_OK) 
-                      || 
-        (mport_bundle_read_install_pkg(mport, bundle, pkg) != MPORT_OK)) 
-    {
+    if (mport_check_preconditions(mport, pkg, MPORT_PRECHECK_INSTALLED|MPORT_PRECHECK_CONFLICTS) != MPORT_OK) 
       RETURN_CURRENT_ERROR;
-    }
+      
+    if (mport_bundle_read_install_pkg(mport, bundle, pkg) != MPORT_OK)
+      RETURN_CURRENT_ERROR;
   }
   
   return MPORT_OK;
