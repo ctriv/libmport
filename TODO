@@ -6,7 +6,6 @@ For library alpha 1:
 * mport_sort_pkg_list(), so you can say mport delete xfce* and have it do 
   in the right order
 * fix the progress bar for update.  
-* mport_install()
 * mport_update()
 
 For tool alpha 1:
