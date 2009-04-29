@@ -7,6 +7,7 @@ use lib qw(/usr/mports/Tools/lib);
 use Magus;
 use Getopt::Std;
 use File::Path;
+use File::Copy qw(move);
 use YAML qw(LoadFile);
 
 
@@ -167,6 +168,20 @@ sub finish_index {
   }
   
   unlink("$opts->{f}/$file");
+}
+
+
+sub move_dirs {
+  my ($opts) = @_;
+  
+  my $finaldir = $opts->{f};
+  $finaldir =~ s/.new$//;
+  
+  if (-d $finaldir) {
+    move($finaldir, "$finaldir.old") || die "Couldn't mv $finaldir $finaldir.old\n";
+  }
+  
+  move($opts->{f}, $finaldir) || die "Couldn't mv $opts->{f} $finaldir: $!\n"; 
 }
 
 
